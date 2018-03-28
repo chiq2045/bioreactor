@@ -1,0 +1,26 @@
+{
+  "name": "bioreactor-server",
+  "version": "1.0.0",
+  "description": "Server to run the bioreactor for McKenzie's Lab",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chiq2045/bioreactor.git"
+  },
+  "keywords": [
+    "bioreactor",
+    "server",
+    "zettajs",
+    "espruino",
+    "esp8266"
+  ],
+  "author": "Charles Oroko",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/chiq2045/bioreactor/issues"
+  },
+  "homepage": "https://github.com/chiq2045/bioreactor#readme"
+}
