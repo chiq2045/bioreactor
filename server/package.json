@@ -22,5 +22,8 @@
   "bugs": {
     "url": "https://github.com/chiq2045/bioreactor/issues"
   },
-  "homepage": "https://github.com/chiq2045/bioreactor#readme"
+  "homepage": "https://github.com/chiq2045/bioreactor#readme",
+  "dependencies": {
+    "zetta": "^1.5.1"
+  }
 }
