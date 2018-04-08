@@ -5,7 +5,8 @@ var exports = {};
 
 //Private constants
 var C = {
-  done : false
+  read : 'R',
+  
 };
 
 /**
@@ -21,11 +22,10 @@ function Ezoph(i2c, address) {
 }
 
 /**
- * Public Constants
+ * Public Constants (mainly used for debug
  */
 Ezoph.prototype.C = {
   command : new Array(16),
-  ezoTime : 900,
   data    : new Array(21)
 };
 
@@ -34,16 +34,40 @@ Ezoph.prototype.C = {
  * @param {String} comm - the command that the device will carry out
  */
 Ezoph.prototype.sendCommand = function(comm) {
-  this.clear();
+  //initialize array
+  var cmd = [];
+
+  //populate the command array
   for ( var i=0; i<comm.length; i++ ) {
-    this.C.command[i] = comm[i].charCodeAt(0);
+    cmd.push(comm[i].charCodeAt(0));
   }
 
-  this.i2c.writeTo(this.address, this.C.command);
+  //send command to device
+  this.i2c.writeTo(this.address, cmd);
 
+  this.C.command = cmd;
+};
+
+Ezoph.prototype.getData = function() {
+  //initialaize array
+  var data = [];
+
+  //receive data from device after 900ms
   if ( comm.toLowerCase() != "sleep" ) {
-    this.getValue();
+    setTimeout(function() {
+      data.push(this.i2c.readFrom(this.address, 21));},900);
   }
+
+  //changes received data to a string
+  var strArray = [];
+  if (data[0] == 1) {
+    for ( i=1; i<data.length; i++ ) {
+      strArray.push(String.fromCharCode(data[i]));
+    }
+  }
+
+  //concatenates the string so that it actually looks like a srting rather than an array
+  this.value = strArray.join("");
 };
 
 /** ------------------ Helper functions --------------------- */
@@ -53,11 +77,11 @@ Ezoph.prototype.sendCommand = function(comm) {
  */
 Ezoph.prototype.clear = function() {
   for (i = 0; i < 16; i++) {
-    this.command[i] = 0;
+    this.C.command[i] = 0;
   }
 
   for (i = 0; i < 21; i++) {
-    this.data[i] = 0;
+    this.C.data[i] = 0;
   }
 
   C.done = false;
@@ -66,13 +90,13 @@ Ezoph.prototype.clear = function() {
 Ezoph.prototype.getValue = function() {
   var temp = new Array(20);
   var val;
-  setTimeout(function(){C.done = true;},this.C.ezoTime);
+  setTimeout(function(){C.done = true;},3000);
   this.C.data = this.i2c.readFrom(this.address, 21);
 
   //changes received data to a string
-  if (this.data[0] == 1) {
-    for ( var i=0; i<data.length-1; i++ ) {
-      temp[i] = String.fromCharCode(this.data[i+1]);
+  if (this.C.data[0] == 1) {
+    for ( var i=0; i<this.C.data.length-1; i++ ) {
+      temp[i] = String.fromCharCode(this.C.data[i+1]);
     }
   }
 
@@ -86,3 +110,4 @@ Ezoph.prototype.getValue = function() {
 exports.connect = function(i2c, address) {
   return new Ezoph(i2c,address);
 };
+
