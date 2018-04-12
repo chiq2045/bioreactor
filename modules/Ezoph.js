@@ -6,7 +6,9 @@ var exports = {};
 //Private constants
 var C = {
   read : 'R',
-  
+  calLow : 'Cal,low,4.00',
+  calMid : 'Cal,mid,7.00',
+  calHigh : 'Cal,high,10.00'
 };
 
 /**
@@ -29,6 +31,54 @@ Ezoph.prototype.C = {
   data    : new Array(21)
 };
 
+/** ------------------ Common functions --------------------- */
+
+/**
+ * Reads ph
+ * @returns {String} data - value returned from device
+ */
+Ezoph.prototype.read = function() {
+  this.sendCommand(C.read);
+  return this.getData();
+};
+
+/**
+ * Single point calibration at midpoint
+ * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
+ */
+Ezoph.prototype.read = function() {
+  this.sendCommand(C.calMid);
+  return this.getData();
+};
+
+/**
+ * Two point calibration at low point
+ * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
+ */
+Ezoph.prototype.read = function() {
+  this.sendCommand(C.calLow);
+  return this.getData();
+};
+
+/**
+ * Three point calibration at high point
+ * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
+ */
+Ezoph.prototype.read = function() {
+  this.sendCommand(C.calHigh);
+  return this.getData();
+};
+
+/** ------------------ Helper functions --------------------- */
+
+/**
+ * Clears the command array
+ */
+Ezoph.prototype.clear = function() {
+  this.C.command = [];
+  this.C.data = [];
+};
+
 /**
  * Read a command as a string
  * @param {String} comm - the command that the device will carry out
@@ -46,8 +96,15 @@ Ezoph.prototype.sendCommand = function(comm) {
   this.i2c.writeTo(this.address, cmd);
 
   this.C.command = cmd;
+/*  this.C.getData();
+
+  return this.value;*/
 };
 
+/**
+ * Retreive data from device
+ * @returns {String} value - String returned from device
+ */
 Ezoph.prototype.getData = function() {
   //initialaize array
   var data = [];
@@ -57,6 +114,7 @@ Ezoph.prototype.getData = function() {
     setTimeout(function() {
       data.push(this.i2c.readFrom(this.address, 21));},900);
   }
+  this.C.data = data;
 
   //changes received data to a string
   var strArray = [];
@@ -68,40 +126,7 @@ Ezoph.prototype.getData = function() {
 
   //concatenates the string so that it actually looks like a srting rather than an array
   this.value = strArray.join("");
-};
-
-/** ------------------ Helper functions --------------------- */
-
-/**
- * Clears the command array
- */
-Ezoph.prototype.clear = function() {
-  for (i = 0; i < 16; i++) {
-    this.C.command[i] = 0;
-  }
-
-  for (i = 0; i < 21; i++) {
-    this.C.data[i] = 0;
-  }
-
-  C.done = false;
-};
-
-Ezoph.prototype.getValue = function() {
-  var temp = new Array(20);
-  var val;
-  setTimeout(function(){C.done = true;},3000);
-  this.C.data = this.i2c.readFrom(this.address, 21);
-
-  //changes received data to a string
-  if (this.C.data[0] == 1) {
-    for ( var i=0; i<this.C.data.length-1; i++ ) {
-      temp[i] = String.fromCharCode(this.C.data[i+1]);
-    }
-  }
-
-  //concatenates the string so that it actually looks like a srting rather than an array
-  this.value = temp.join("");
+  return this.value;
 };
 
 /** ---------------------- Exports ------------------------- */
