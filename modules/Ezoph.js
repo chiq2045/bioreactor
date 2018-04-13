@@ -27,8 +27,8 @@ function Ezoph(i2c, address) {
  * Public Constants (mainly used for debug
  */
 Ezoph.prototype.C = {
-  command : new Array(16),
-  data    : new Array(21)
+  command : [],
+  data    : [],
 };
 
 /** ------------------ Common functions --------------------- */
@@ -46,7 +46,7 @@ Ezoph.prototype.read = function() {
  * Single point calibration at midpoint
  * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
  */
-Ezoph.prototype.read = function() {
+Ezoph.prototype.calMid = function() {
   this.sendCommand(C.calMid);
   return this.getData();
 };
@@ -55,7 +55,7 @@ Ezoph.prototype.read = function() {
  * Two point calibration at low point
  * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
  */
-Ezoph.prototype.read = function() {
+Ezoph.prototype.calLow = function() {
   this.sendCommand(C.calLow);
   return this.getData();
 };
@@ -64,7 +64,7 @@ Ezoph.prototype.read = function() {
  * Three point calibration at high point
  * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
  */
-Ezoph.prototype.read = function() {
+Ezoph.prototype.calHigh = function() {
   this.sendCommand(C.calHigh);
   return this.getData();
 };
@@ -84,18 +84,10 @@ Ezoph.prototype.clear = function() {
  * @param {String} comm - the command that the device will carry out
  */
 Ezoph.prototype.sendCommand = function(comm) {
-  //initialize array
-  var cmd = [];
-
-  //populate the command array
-  for ( var i=0; i<comm.length; i++ ) {
-    cmd.push(comm[i].charCodeAt(0));
-  }
-
   //send command to device
-  this.i2c.writeTo(this.address, cmd);
+  this.i2c.writeTo(this.address, comm);
 
-  this.C.command = cmd;
+  this.C.command = comm;
 /*  this.C.getData();
 
   return this.value;*/
@@ -107,12 +99,12 @@ Ezoph.prototype.sendCommand = function(comm) {
  */
 Ezoph.prototype.getData = function() {
   //initialaize array
-  var data = [];
+  var data = new A;
 
   //receive data from device after 900ms
-  if ( comm.toLowerCase() != "sleep" ) {
+  if ( this.C.command.toLowerCase() != "sleep" ) {
     setTimeout(function() {
-      data.push(this.i2c.readFrom(this.address, 21));},900);
+      data = this.i2c.readFrom(this.address, 21);},900);
   }
   this.C.data = data;
 
@@ -120,7 +112,9 @@ Ezoph.prototype.getData = function() {
   var strArray = [];
   if (data[0] == 1) {
     for ( i=1; i<data.length; i++ ) {
-      strArray.push(String.fromCharCode(data[i]));
+      if (data[i]!==0) {
+        strArray.push(String.fromCharCode(data[i]));
+      }
     }
   }
 
@@ -135,4 +129,8 @@ Ezoph.prototype.getData = function() {
 exports.connect = function(i2c, address) {
   return new Ezoph(i2c,address);
 };
+
+var i2c = new I2C();
+i2c.setup({scl:NodeMCU.D1, sda:NodeMCU.D2});
+var ph = exports.connect(i2c, 0x63);
 
