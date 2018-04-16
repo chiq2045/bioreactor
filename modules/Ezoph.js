@@ -5,10 +5,10 @@ var exports = {};
 
 //Private constants
 var C = {
-  read : 'R',
-  calLow : 'Cal,low,4.00',
-  calMid : 'Cal,mid,7.00',
-  calHigh : 'Cal,high,10.00'
+  read     : 'R',
+  calLow   : 'Cal,low,4.00',
+  calMid   : 'Cal,mid,7.00',
+  calHigh  : 'Cal,high,10.00'
 };
 
 /**
@@ -24,11 +24,11 @@ function Ezoph(i2c, address) {
 }
 
 /**
- * Public Constants (mainly used for debug
+ * Public Constants (mainly used for debugging)
  */
 Ezoph.prototype.C = {
-  command : [],
-  data    : [],
+  command,
+  data,
 };
 
 /** ------------------ Common functions --------------------- */
@@ -84,6 +84,8 @@ Ezoph.prototype.clear = function() {
  * @param {String} comm - the command that the device will carry out
  */
 Ezoph.prototype.sendCommand = function(comm) {
+  //initialize arrays for debugging
+  this.clear();
   //send command to device
   this.i2c.writeTo(this.address, comm);
 
@@ -99,7 +101,7 @@ Ezoph.prototype.sendCommand = function(comm) {
  */
 Ezoph.prototype.getData = function() {
   //initialaize array
-  var data = new A;
+  var data;
 
   //receive data from device after 900ms
   if ( this.C.command.toLowerCase() != "sleep" ) {
