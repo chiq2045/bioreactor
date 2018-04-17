@@ -7,7 +7,7 @@ wifi.startAP("Bioreactor-ESP", {authMode:0});
 wifi.disconnect();
 
 var i2c = new I2C();
-i2c.setup({scl:NodeMCU.D2, sda:NodeMCU.D1});
+i2c.setup({scl:NodeMCU.D2, sda:NodeMCU.D3});
 var spi = new SPI();
 spi.setup({miso:NodeMCU.D5, sck:NodeMCU.D7});
 var cs = NodeMCU.D6;
@@ -26,24 +26,22 @@ var reg = {
 
 var readPPM = [0xFF,0x01,0x9C,0x00,0x00,0x00,0x00,0x00,0x63];
 
-function phComm(i2c, comm) {
+phComm = function(i2c, comm) {
   i2c.writeTo(0x63, comm);
   var phData = [];
-  var str = [];
-  if (comm !== 'sleep') {
-    setTimeout(function() {
-      phData = i2c.readFrom(0x63, 21);
-      for (var i=0; i<phData.length; i++) {
-        if (phData[i] !== 0) {
-          str.push(String.fromCharCode(phData[i]));
-        }
+  var strArray = [];
+  setTimeout(function() {
+    phData = i2c.readFrom(0x63, 21);
+    for (var i=0; i<phData.length; i++) {
+      if (phData[i] !== 0) {
+        strArray.push(String.fromCharCode(phData[i]));
       }
-    }, 900);
-  }
-  return str.join("");
-}
+    }
+  }, 900);
+  return phData;
+};
 
-function co2Begin(reg) {
+function co2Begin(i2c, reg) {
   i2c.writeTo(0x4d, [reg.iocontrol, 0x08]);
   i2c.writeTo(0x4d, [reg.fcr, 0x07]);
   i2c.writeTo(0x4d, [reg.lcr, 0x83]);
@@ -52,7 +50,7 @@ function co2Begin(reg) {
   i2c.writeTo(0x4d, [reg.lcr, 0x03]);
 }
 
-function co2Read(reg, readPPM) {
+function co2Read(i2c, reg, readPPM) {
   i2c.writeTo(0x4d, [reg.fcr, 0x07]);
   i2c.writeTo(0x4d, reg.txlvl);
   if (i2c.readFrom(0x4d, 1) >= readPPM.length) {
