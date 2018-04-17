@@ -71,12 +71,12 @@ mh_z16.prototype.C = {
  */
 mh_z16.prototype.begin = function() {
   var ad = this.address;
-  this.i2c.writeTo( ad, [C.iocontrol, 0x08] );
-  this.i2c.writeTo( ad, [C.fcr, 0x07] );
-  this.i2c.writeTo( ad, [C.lcr, 0x83] );
-  this.i2c.writeTo( ad, [C.dll, 0x60] );
-  this.i2c.writeTo( ad, [C.dlh, 0x00] );
-  this.i2c.writeTo( ad, [C.lcr, 0x03] );
+  this.i2c.writeTo( ad, [C.iocontrol<<3, 0x08] );
+  this.i2c.writeTo( ad, [C.fcr<<3, 0x07] );
+  this.i2c.writeTo( ad, [C.lcr<<3, 0x83] );
+  this.i2c.writeTo( ad, [C.dll<<3, 0x60] );
+  this.i2c.writeTo( ad, [C.dlh<<3, 0x00] );
+  this.i2c.writeTo( ad, [C.lcr<<3, 0x03] );
   this.measure();
 };
 
@@ -85,7 +85,7 @@ mh_z16.prototype.begin = function() {
  * @returns {int} this.ppm - the concentration of CO2 in parts per million
  */
 mh_z16.prototype.measure = function() {
-  this.i2c.writeTo( this.address, [C.fcr, 0x07] );
+  this.i2c.writeTo( this.address, [C.fcr<<3, 0x07] );
   this.send(this.C.readCommand);
   this.C.readData = this.receive();
   this.ppm = this.parse(this.C.readData);
@@ -97,7 +97,7 @@ mh_z16.prototype.measure = function() {
  * Must be done in normal air ~ 400ppm
  */
 mh_z16.prototype.calZero = function() {
-  this.i2c.writeTo( this.address, [C.fcr, 0x07] );
+  this.i2c.writeTo( this.address, [C.fcr<<3, 0x07] );
   this.send(this.C.calCommand);
 };
 
@@ -109,10 +109,10 @@ mh_z16.prototype.calZero = function() {
  */
 mh_z16.prototype.send = function(pdata) {
   var ad = this.address;
-  this.i2c.writeTo( ad, C.txlvl );
+  this.i2c.writeTo( ad, C.txlvl<<3 );
   var result = this.i2c.readFrom( ad, 1 );
   if ( result>=9 ) {
-    this.i2c.writeTo( ad, [C.thr, pdata] );
+    this.i2c.writeTo( ad, [C.thr<<3, pdata] );
   }
 };
 
@@ -122,7 +122,7 @@ mh_z16.prototype.send = function(pdata) {
  */
 mh_z16.prototype.receive = function() {
   var ad = this.address;
-  this.i2c.writeTo( ad, C.rhr );
+  this.i2c.writeTo( ad, C.rhr<<3 );
   return this.i2c.readFrom( ad, 9 );
 };
 
@@ -138,6 +138,8 @@ mh_z16.prototype.parse = function(pdata) {
   }
   if (pdata[0] == 0xff && pdata[1] == 0x9c && checksum == 0xff) {
     return pdata[2]<<24 | pdata[3]<<16 | pdata[4]<<8 | pdata[5];
+  } else {
+    return NaN;
   }
 };
 
