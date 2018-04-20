@@ -1,11 +1,11 @@
 /* =============== Initialise the variables and board =============== */
-var wifi = require("Wifi");
+//var wifi = require("Wifi");
 //Uncomment the following lines to connect to wifi
 //wifi.connect("WWU-Aruba-HWauth", {authMode:0});
 //wifi.stopAP();
 //comment if connecting to wifi
-wifi.startAP("Bioreactor-ESP", {authMode:0});
-wifi.disconnect();
+//wifi.startAP("Bioreactor-ESP", {authMode:0});
+//wifi.disconnect();
 
 var i2c = new I2C();
 i2c.setup({scl:NodeMCU.D2, sda:NodeMCU.D3});
@@ -119,7 +119,7 @@ var bioData = {
 
 /* =============== Main functions =============== */
 /** Read the pH */
-var phComm = setInterval(function() {
+/*var phComm = setInterval(function() {
   i2c.writeTo(99, 'R');
   setTimeout(function() {
     phData = i2c.readFrom(99, 21);
@@ -131,88 +131,60 @@ var phComm = setInterval(function() {
     }
     ph = strData.join("");
   }, 900);
-}, readTime);
+}, readTime);*/
 
-var comm = setInterval(function() {
-  i2c.writeTo(99, 'R');
-  setTimeout(function() {
-    phData = i2c.readFrom(99, 21);
-    strData = [];
-    for (var i=1; i<phData.length; i++) {
-      if (phData[i]!==0) {
-        strData.push(String.fromCharCode(phData[i]));
+co2Setup();
+setTimeout(function() {
+  /** Read the CO2 concentration */
+  var co2Comm = setInterval(function() {
+    i2c.writeTo(0x4d, [reg.fcr, 0x07]);
+    i2c.writeTo(0x4d, reg.txlvl);
+    if (i2c.readFrom(0x4d, 1)[0] >= readPPM.length) {
+      i2c.writeTo(0x4d, [reg.thr, readPPM]);
+    }
+    rx = 0;
+    i2c.writeTo(0x4d, reg.rxlvl);
+    setTimeout(function() {
+      rx = i2c.readFrom(0x4d, 1);
+      if (rx[0]>9) {
+        rx[0] = 9;
       }
+      i2c.writeTo(0x4d, reg.rhr);
+      buf = i2c.readFrom(0x4d, rx);
+      ppm = buf[2]<<24 | buf[3]<<16 | buf[4]<<8 | buf[5];//
+    }, 50);
+  }, readTime);
+
+  var phComm = setInterval(function() {
+    i2c.writeTo(99, 'R');
+    setTimeout(function() {
+      phData = i2c.readFrom(99, 21);
+      strData = [];
+      for (var i=1; i<phData.length; i++) {
+        if (phData[i]!==0) {
+          strData.push(String.fromCharCode(phData[i]));
+        }
+      }
+    }, 900);
+  }, readTime);
+
+  /** Read the temperature */
+  var tempComm = setInterval(function() {
+    tempData = spi.send([0,0,0,0], cs);
+    temp = tempData[0]<<24 | tempData[1]<<16 | tempData[2]<<8 | tempData[3];
+
+    if (temp & 0x7) {
+      return NaN;
     }
-    ph = strData.join("");
-  }, 900);
-  i2c.writeTo(0x4d, [reg.fcr, 0x07]);
-  i2c.writeTo(0x4d, reg.txlvl);
-  if (i2c.readFrom(0x4d, 1)[0] >= readPPM.length) {
-    i2c.writeTo(0x4d, [reg.thr, readPPM]);
-  }
-  rx = 0;
-  i2c.writeTo(0x4d, reg.rxlvl);
-  setTimeout(function() {
-    rx = i2c.readFrom(0x4d, 1);
-    if (rx[0]>9) {
-      rx[0] = 9;
+
+    if (temp & 0x80000000) {
+      temp = 0xffffc000 | ((temp>>18) & 0x0003ffff);
+    } else {
+      temp>>=18;
     }
-    i2c.writeTo(0x4d, reg.rhr);
-    buf = i2c.readFrom(0x4d, rx);
-    ppm = buf[2]<<24 | buf[3]<<16 | buf[4]<<8 | buf[5];//
-  }, 50);
-  
-  tempData = spi.send([0,0,0,0], cs);
-  temp = tempData[0]<<24 | tempData[1]<<16 | tempData[2]<<8 | tempData[3];
-
-  if (temp & 0x7) {
-    return NaN;
-  }
-
-  if (temp & 0x80000000) {
-    temp = 0xffffc000 | ((temp>>18) & 0x0003ffff);
-  } else {
-    temp>>=18;
-  }
-  temp = temp/4;
-}, readTime);
-
-/** Read the CO2 concentration */
-var co2Comm = setInterval(function() {
-  i2c.writeTo(0x4d, [reg.fcr, 0x07]);
-  i2c.writeTo(0x4d, reg.txlvl);
-  if (i2c.readFrom(0x4d, 1)[0] >= readPPM.length) {
-    i2c.writeTo(0x4d, [reg.thr, readPPM]);
-  }
-  rx = 0;
-  i2c.writeTo(0x4d, reg.rxlvl);
-  setTimeout(function() {
-    rx = i2c.readFrom(0x4d, 1);
-    if (rx[0]>9) {
-      rx[0] = 9;
-    }
-    i2c.writeTo(0x4d, reg.rhr);
-    buf = i2c.readFrom(0x4d, rx);
-    ppm = buf[2]<<24 | buf[3]<<16 | buf[4]<<8 | buf[5];//
-  }, 50);
-}, readTime);
-
-/** Read the temperature */
-var tempComm = setInterval(function() {
-  tempData = spi.send([0,0,0,0], cs);
-  temp = tempData[0]<<24 | tempData[1]<<16 | tempData[2]<<8 | tempData[3];
-
-  if (temp & 0x7) {
-    return NaN;
-  }
-
-  if (temp & 0x80000000) {
-    temp = 0xffffc000 | ((temp>>18) & 0x0003ffff);
-  } else {
-    temp>>=18;
-  }
-  temp = temp/4;
-}, readTime);
+    temp = temp/4;
+  }, readTime);
+}, 10000);
 
 /** Advance time counter */
 var getTime = setInterval(function() {
@@ -233,7 +205,7 @@ var getTime = setInterval(function() {
 
 /** Publish data to console */
 var dataComm = setInterval(function() {
-  bioData.ph = ph;
+  bioData.ph = parseInt(strData.join(""));
   phAvg = phPID.average;
   phValve = digitalRead(actuators.phValve);
   bioData.co2 = ppm;
@@ -247,7 +219,7 @@ var dataComm = setInterval(function() {
 }, dataTime);
 
 /** Update Actuators */
-var updateActuators = setInterval(function() {
+/*var updateActuators = setInterval(function() {
   if (!digitalRead(actuators.co2Valve) &&
         timeComp(co2Time, time, co2PID.offTime) &&
         ppm<co2PID.target) {
@@ -301,10 +273,10 @@ var updateActuators = setInterval(function() {
     actuators.phValve = 1;
     setTime(phTime);
   }
-}, readTime);
+}, readTime);*/
 
 /** Store Samples */
-var storeSamples = setInterval(function() {
+/*var storeSamples = setInterval(function() {
   if (timeInterval(time)-timeInterval(co2Time) >= co2PID.offTime*co2PID.sample.length/40) {
     if (co2PID.samples.length >=40) {
       co2PID.samples.shift();
@@ -328,12 +300,12 @@ var storeSamples = setInterval(function() {
     tempPID.samples.push(ppm);
     tempPID.average = tempPID.samples.reduce(getSum)/tempPIDsamples.length;
   }
-}, readTime);
+}, readTime);*/
 
 /* =============== Helper Functions =============== */
 //clearInterval(dataComm);
-clearInterval(storeSamples);
-clearInterval(updateActuators);
+//clearInterval(storeSamples);
+//clearInterval(updateActuators);
 
 function timeComp(t1, t, intvl) {
   if ((timeInterval(t)-timeInterval(t1))>=intvl) {
