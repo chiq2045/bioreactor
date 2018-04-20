@@ -3,8 +3,12 @@
 
 var exports = {};
 
+//Private constants
 var C = {
-  done : false
+  read     : 'R',
+  calLow   : 'Cal,low,4.00',
+  calMid   : 'Cal,mid,7.00',
+  calHigh  : 'Cal,high,10.00'
 };
 
 /**
@@ -13,36 +17,56 @@ var C = {
  * @param {int} address - address of the device
  * @returns {string} value - the output of the device
  */
-function ezoph(i2c, address) {
+function Ezoph(i2c, address) {
   this.i2c = i2c;
   this.address = address;
   this.value = 0;
 }
 
 /**
- * Public Constants
+ * Public Constants (mainly used for debugging)
  */
-ezoph.prototype.C = {
-  command : new Array(16),
-  ezoTime : 900,
-  data    : new Array(21)
+Ezoph.prototype.C = {
+  command,
+  data,
+};
+
+/** ------------------ Common functions --------------------- */
+
+/**
+ * Reads ph
+ * @returns {String} data - value returned from device
+ */
+Ezoph.prototype.read = function() {
+  this.sendCommand(C.read);
+  return this.getData();
 };
 
 /**
- * Read a command as a string
- * @param {String} comm - the command that the device will carry out
+ * Single point calibration at midpoint
+ * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
  */
-ezoph.prototype.sendCommand = function(comm) {
-  this.clear();
-  for ( var i=0; i<comm.length; i++ ) {
-    this.C.command[i] = comm[i].charCodeAt(0);
-  }
+Ezoph.prototype.calMid = function() {
+  this.sendCommand(C.calMid);
+  return this.getData();
+};
 
-  this.i2c.writeTo(this.address, this.C.command);
+/**
+ * Two point calibration at low point
+ * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
+ */
+Ezoph.prototype.calLow = function() {
+  this.sendCommand(C.calLow);
+  return this.getData();
+};
 
-  if ( comm.toLowerCase() != "sleep" ) {
-    this.getValue();
-  }
+/**
+ * Three point calibration at high point
+ * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
+ */
+Ezoph.prototype.calHigh = function() {
+  this.sendCommand(C.calHigh);
+  return this.getData();
 };
 
 /** ------------------ Helper functions --------------------- */
@@ -50,36 +74,65 @@ ezoph.prototype.sendCommand = function(comm) {
 /**
  * Clears the command array
  */
-ezoph.prototype.clear = function() {
-  for (i = 0; i < 16; i++) {
-    this.command[i] = 0;
-  }
-
-  for (i = 0; i < 21; i++) {
-    this.data[i] = 0;
-  }
-
-  C.done = false;
+Ezoph.prototype.clear = function() {
+  this.C.command = [];
+  this.C.data = [];
 };
 
-ezoph.prototype.getValue = function() {
-  var temp = new Array(20);
-  var val;
-  setTimeout(function(){C.done = true;},1000);
-  this.C.data = this.i2c.readFrom(this.address, 21);
+/**
+ * Read a command as a string
+ * @param {String} comm - the command that the device will carry out
+ */
+Ezoph.prototype.sendCommand = function(comm) {
+  //initialize arrays for debugging
+  this.clear();
+  //send command to device
+  this.i2c.writeTo(this.address, comm);
 
-  if (this.data[0] == 1) {
-    for ( var i=0; i<data.length-1; i++ ) {
-      temp[i] = String.fromCharCode(this.data[i+1]);
+  this.C.command = comm;
+/*  this.C.getData();
+
+  return this.value;*/
+};
+
+/**
+ * Retreive data from device
+ * @returns {String} value - String returned from device
+ */
+Ezoph.prototype.getData = function() {
+  //initialaize array
+  var data;
+
+  //receive data from device after 900ms
+  if ( this.C.command.toLowerCase() != "sleep" ) {
+    setTimeout(function() {
+      data = this.i2c.readFrom(this.address, 21);},900);
+  }
+  this.C.data = data;
+
+  //changes received data to a string
+  var strArray = [];
+  if (data[0] == 1) {
+    for ( i=1; i<data.length; i++ ) {
+      if (data[i]!==0) {
+        strArray.push(String.fromCharCode(data[i]));
+      }
     }
   }
 
-  this.value = temp.join("");
+  //concatenates the string so that it actually looks like a srting rather than an array
+  this.value = strArray.join("");
+  return this.value;
 };
 
 /** ---------------------- Exports ------------------------- */
 
-/** This is 'exported' so it can be used with `require('ezoph.js').connect(pin1,pin2)` */
+/** This is 'exported' so it can be used with `require('Ezoph.js').connect(pin1,pin2)` */
 exports.connect = function(i2c, address) {
-  return new ezoph(i2c,address);
+  return new Ezoph(i2c,address);
 };
+
+var i2c = new I2C();
+i2c.setup({scl:NodeMCU.D1, sda:NodeMCU.D2});
+var ph = exports.connect(i2c, 0x63);
+
