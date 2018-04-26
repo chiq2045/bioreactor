@@ -41,7 +41,7 @@ var co2Data = [];
 
 var phData = [];
 var strData = [];
-var phReturn;
+var phReturn; //possibly no use
 
 var tempData = [];
 
@@ -105,12 +105,12 @@ var actuators = {
 };
 
 var bioData = {
-  ph        : phPID.current,
-  phAvg     : 0,
-  phValve   : actuators.phValve,
-  co2       : co2PID.current,
-  co2Avg    : 0,
-  co2Valve  : digitalRead(actuators.co2Valve),
+  //ph        : phPID.current,
+  //phAvg     : 0,
+  //phValve   : actuators.phValve,
+  //co2       : co2PID.current,
+  //co2Avg    : 0,
+  //co2Valve  : digitalRead(actuators.co2Valve),
   temp      : tempPID.current,
   tempAvg   : 0,
   tempValve : digitalRead(actuators.tempValve),
@@ -170,72 +170,55 @@ function getSum(total, num) {
 
 function bioreactorBegin() {
   co2Setup();
-  var getTime = setInterval(function(){ advanceTime(); }, readTime);
 }
-
-var startDataCollection = setInterval(function() {
-  if (time.secs == 5 || time.secs == 35) { //read ph twice a minute
-    readPH();
-  }
-
-  if (time.secs == 15 || time.secs == 45) { //read co2 twice a minute
-    readCO2(buf);
-  }
-
-  if (time.secs%10 === 0) { //read temp every 10 seconds, print Data every 10 seconds
-    readTemp();
-    printData();
-  }
-}, readTime);
 
 /** Read the CO2 concentration */
-function readCO2(buf) {
-  i2c.writeTo(0x4d, [reg.fcr, 0x07]);
-  i2c.writeTo(0x4d, reg.txlvl);
-  if (i2c.readFrom(0x4d, 1)[0] >= readPPM.length) {
-    i2c.writeTo(0x4d, [reg.thr, readPPM]);
-  }
-  rx = 0;
-  i2c.writeTo(0x4d, reg.rxlvl);
-  setTimeout(function() {
-    rx = i2c.readFrom(0x4d, 1);
-    if (rx[0]>9) {
-      rx[0] = 9;
+var co2Comm = setInterval(function(buf) {
+  if (time.secs%30 >10 && time.secs%30<=15) {
+    i2c.writeTo(0x4d, [reg.fcr, 0x07]);
+    i2c.writeTo(0x4d, reg.txlvl);
+    if (i2c.readFrom(0x4d, 1)[0] >= readPPM.length) {
+      i2c.writeTo(0x4d, [reg.thr, readPPM]);
     }
-    i2c.writeTo(0x4d, reg.rhr);
-    buf = i2c.readFrom(0x4d, rx);
-    co2PID.current = buf[2]<<24 | buf[3]<<16 | buf[4]<<8 | buf[5];
-  }, 50);
-}
+    rx = 0;
+    i2c.writeTo(0x4d, reg.rxlvl);
+    setTimeout(function() {
+      rx = i2c.readFrom(0x4d, 1);
+      if (rx[0]>9) {
+        rx[0] = 9;
+      }
+      i2c.writeTo(0x4d, reg.rhr);
+      buf = i2c.readFrom(0x4d, rx);
+      co2PID.current = buf[2]<<24 | buf[3]<<16 | buf[4]<<8 | buf[5];
+    }, 50);
+  }
+}, readTime*5);
 
 /** Communicate with EZO pH */
-function phComm(comm) {
-  i2c.writeTo(99, comm);
-  if (comm.toLowerCase() != 'sleep') {
-    setTimeout(function() {
-      phData = i2c.readFrom(99, 21);
-      strData = [];
-      for (var i=1; i<phData.length; i++) {
-        if (phData[i]!==0) {
-          strData.push(String.fromCharCode(phData[i]));
+var phComm = setInterval(function() {
+//  if (time.secs%30 >0 && time.secs%30<=5) {
+    i2c.writeTo(99, 'R');
+    if (comm.toLowerCase() != 'sleep') {
+      setTimeout(function() {
+        phData = i2c.readFrom(99, 21);
+        strData = [];
+        for (var i=1; i<phData.length; i++) {
+          if (phData[i]!==0) {
+            strData.push(String.fromCharCode(phData[i]));
+          }
         }
-      }
-      if (comm.toLowerCase() == 'r') {
-        phPID.current = parseFloat(strData.join(""));
-      } else {
-        phReturn = strData.join("");
-      }
-    }, 900);
-  }
-}
-
-/** Read ph */
-function readPH() {
-  phComm('R');
-}
+        if (comm.toLowerCase() == 'r') {
+          phPID.current = parseFloat(strData.join(""));
+        } else {
+          phReturn = strData.join("");
+        }
+      }, 900);
+    }
+//  }
+}, readTime*5);
 
 /** Read the temperature */
-function readTemp() {
+var tempComm = setInterval(function() {
   var temp = 0;
   tempData = spi.send([0,0,0,0], cs);
   temp = tempData[0]<<24 | tempData[1]<<16 | tempData[2]<<8 | tempData[3];
@@ -250,10 +233,10 @@ function readTemp() {
     temp>>=18;
   }
   tempPID.current = temp/4;
-}
+}, readTime*5);
 
 /** Advance time counter */
-function advanceTime() {
+var advanceTime = setInterval(function() {
   time.secs++;
   if (time.secs>=60) {
     time.secs = 0;
@@ -267,41 +250,41 @@ function advanceTime() {
       }
     }
   }
-}
+}, readTime);
 
 /** Publish data to console */
-function printData() {
+var dataComm = setInterval(function() {
   //update current values
-  bioData.ph = phPID.current;
-  bioData.co2 = co2PID.current;
+  //bioData.ph = phPID.current;
+  //bioData.co2 = co2PID.current;
   bioData.temp = tempPID.current;
 
   //update averages
-  if (phPID.samples.length>0 &&
-      co2PID.samples.length>0 &&
+  if (//phPID.samples.length>0 &&
+      //co2PID.samples.length>0 &&
       tempPID.samples.length>0) {
-    bioData.phAvg = phPID.samples.reduce(getSum)/phPID.samples.length;
-    bioData.co2Avg = co2PID.samples.reduce(getSum)/co2PID.samples.length;
+    //bioData.phAvg = phPID.samples.reduce(getSum)/phPID.samples.length;
+    //bioData.co2Avg = co2PID.samples.reduce(getSum)/co2PID.samples.length;
     bioData.tempAvg = tempPID.samples.reduce(getSum)/tempPID.samples.length;
   } else {
-    bioData.phAvg = 0;
-    bioData.co2Avg = 0;
+    //bioData.phAvg = 0;
+    //bioData.co2Avg = 0;
     bioData.tempAvg = 0;
   }
 
   //update actuator values (mainly for debug)
-  bioDataphValve = actuators.phValve;
-  bioData.co2Valve = digitalRead(actuators.co2Valve);
+  //bioData.phValve = actuators.phValve;
+  //bioData.co2Valve = digitalRead(actuators.co2Valve);
   bioData.tempValve = digitalRead(actuators.tempValve);
 
   //update time and print data
   bioData.time = time;
   console.log(bioData);
-}
+}, readTime*5);
 
 /** Update Actuators */
-/*var updateActuators = setInterval(function() {
-  if (!digitalRead(actuators.co2Valve) &&
+var updateActuators = setInterval(function() {
+/*  if (!digitalRead(actuators.co2Valve) &&
         timeComp(co2Time, time, co2PID.offTime) &&
         ppm<co2PID.target) {
     digitalWrite(actuators.co2Valve, actuators.on);
@@ -317,27 +300,27 @@ function printData() {
                   timeComp(co2Time, time, co2PID.onTime))) {
     digitalWrite(actuators.co2Valve, actuators.off);
     setTime(co2Time);
-  }
+  }*/
 
   if (!digitalRead(actuators.tempValve) &&
-        timeComp(tempTime, time, tempPID.offTime) &&
-        temp<tempPID.target) {
+      timeComp(tempTime, time, tempPID.offTime) &&
+      temp<tempPID.target) {
     digitalWrite(actuators.tempValve, actuators.on);
     setTime(tempTime);
-    tempPID.onTime = actuators.tempValveResponseOffset +
-                    tempPID.P*(temp-tempPID.target) +
+    tempPID.onTime = 5 +
+                    tempPID.P*(tempPID.current-tempPID.target) +
                     tempPID.I*(tempPID.target-tempPID.average) +
-                    tempPID.D*(temp-temp0);
-    temp0 = temp;
+                    tempPID.D*(tempPID.current-tempPID.last);
+    tempPID.last = tempPID.current;
   }
   if (digitalRead(actuators.tempValve) &&
-               (temp>=tempPID.target ||
-                  timeComp(tempTime, time, tempPID.onTime))) {
+      (temp>=tempPID.target ||
+       timeComp(tempTime, time, tempPID.onTime))) {
     digitalWrite(actuators.tempValve, actuators.off);
     setTime(tempTime);
   }
 
-  if (!actuators.phValve &&
+/*  if (!actuators.phValve &&
         timeComp(phTime, time, phPID.offTime) &&
         ph<phPID.target) {
     digitalWrite(actuators.phValve, actuators.on);
@@ -353,8 +336,8 @@ function printData() {
                   timeComp(phTime, time, phPID.onTime))) {
     actuators.phValve = 1;
     setTime(phTime);
-  }
-}, readTime);*/
+  }*/
+}, readTime);
 
 /** Store Samples */
 /*var storeSamples = setInterval(function() {
