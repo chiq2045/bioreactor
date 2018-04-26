@@ -1,4 +1,5 @@
-/* =============== Initialise the variables and board =============== */
+/* =============== Initialise the variables and board ================
+ */
 require("Wifi").restore();
 //Uncomment the following lines to connect to wifi
 //wifi.connect("WWU-Aruba-HWauth", {authMode:0});
@@ -7,12 +8,20 @@ require("Wifi").restore();
 //wifi.startAP("Bioreactor-ESP", {authMode:0});
 //wifi.disconnect();
 
+/** =============== Setup Communication Protocols ====================
+ * We will be using I2C for pH and CO2 sensors, and SPI for
+ * temperature sensor. Seeing as ESP8266 does not have hardware
+ * I2c and SPI, we need to setup software communication.
+ */
 var i2c = new I2C();
 i2c.setup({scl:NodeMCU.D2, sda:NodeMCU.D3});
 var spi = new SPI();
 spi.setup({miso:NodeMCU.D5, sck:NodeMCU.D7});
 var cs = NodeMCU.D6;
 
+/** =============== Setup Non-Controllable Variables =================
+ * These variables are static (PRIVATE)
+ */
 var reg = {
   iocontrol  : 0x0e<<3,
   fcr        : 0x02<<3,
@@ -23,15 +32,6 @@ var reg = {
   rhr        : 0x00<<3,
   txlvl      : 0x08<<3,
   rxlvl      : 0x09<<3
-};
-
-var co2Setup = function() {
-  i2c.writeTo(0x4d, [reg.iocontrol, 0x08]);
-  i2c.writeTo(0x4d, [reg.fcr, 0x07]);
-  i2c.writeTo(0x4d, [reg.lcr, 0x83]);
-  i2c.writeTo(0x4d, [reg.dll, 0x60]);
-  i2c.writeTo(0x4d, [reg.dlh, 0x00]);
-  i2c.writeTo(0x4d, [reg.lcr, 0x03]);
 };
 
 var readPPM = [0xFF,0x01,0x9C,0x00,0x00,0x00,0x00,0x00,0x63];
@@ -56,6 +56,15 @@ var co2Time = time;
 var phTime = time;
 var tempTime = time;
 var readTime = 1000;
+
+function co2Setup() {
+  i2c.writeTo(0x4d, [reg.iocontrol, 0x08]);
+  i2c.writeTo(0x4d, [reg.fcr, 0x07]);
+  i2c.writeTo(0x4d, [reg.lcr, 0x83]);
+  i2c.writeTo(0x4d, [reg.dll, 0x60]);
+  i2c.writeTo(0x4d, [reg.dlh, 0x00]);
+  i2c.writeTo(0x4d, [reg.lcr, 0x03]);
+}
 
 var co2PID = {
   P         : 0.01,
@@ -98,7 +107,6 @@ var actuators = {
   on        : true,
   off       : false,
   co2Valve  : NodeMCU.D4,
-  phValve   : 0,
   phStep    : NodeMCU.D1,
   phDir     : NodeMCU.D0,
   tempValve : NodeMCU.D8
@@ -107,13 +115,13 @@ var actuators = {
 var bioData = {
   //ph        : phPID.current,
   //phAvg     : 0,
-  //phValve   : actuators.phValve,
+  //phValve   : 0,
   //co2       : co2PID.current,
   //co2Avg    : 0,
-  //co2Valve  : digitalRead(actuators.co2Valve),
+  //co2Valve  : 0,
   temp      : tempPID.current,
   tempAvg   : 0,
-  tempValve : digitalRead(actuators.tempValve),
+  tempValve : 0,
   time      : time
 };
 
@@ -275,7 +283,6 @@ var dataComm = setInterval(function() {
   //update actuator values (mainly for debug)
   //bioData.phValve = actuators.phValve;
   //bioData.co2Valve = digitalRead(actuators.co2Valve);
-  bioData.tempValve = digitalRead(actuators.tempValve);
 
   //update time and print data
   bioData.time = time;
@@ -302,22 +309,27 @@ var updateActuators = setInterval(function() {
     setTime(co2Time);
   }*/
 
-  if (!digitalRead(actuators.tempValve) &&
-      timeComp(tempTime, time, tempPID.offTime) &&
-      temp<tempPID.target) {
+  if (!bioData.tempValve &&
+      timeInterval(time)>tempPID.offTime*4 &&
+      tempPID.current<tempPID.target &&
+      timeComp(tempTime, time, tempPID.offTime)) {
     digitalWrite(actuators.tempValve, actuators.on);
+    bioData.tempValve = true;
     setTime(tempTime);
     tempPID.onTime = 5 +
-                    tempPID.P*(tempPID.current-tempPID.target) +
+                    tempPID.P*(tempPID.target-tempPID.current) +
                     tempPID.I*(tempPID.target-tempPID.average) +
                     tempPID.D*(tempPID.current-tempPID.last);
     tempPID.last = tempPID.current;
+    console.log('on update');
   }
-  if (digitalRead(actuators.tempValve) &&
-      (temp>=tempPID.target ||
-       timeComp(tempTime, time, tempPID.onTime))) {
+  if (bioData.tempValve &&
+      (tempPID.current>=tempPID.target ||
+       timeComp(tempTime, time, tempPID.onTime*4))) {
     digitalWrite(actuators.tempValve, actuators.off);
+    bioData.tempValve = false;
     setTime(tempTime);
+    console.log('off update');
   }
 
 /*  if (!actuators.phValve &&
