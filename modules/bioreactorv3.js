@@ -62,7 +62,7 @@ var Time = function (){
 
 var co2Time = new Time();
 var phTime = new Time();
-var tempTime = new Time():
+var tempTime = new Time();
 
 var readTime = 1000;
 
