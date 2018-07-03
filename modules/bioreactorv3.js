@@ -169,7 +169,43 @@ function getSum(total, num) {
 
 /* =============== Main functions =============== */
 /** Read the pH */
-/*var phComm = setInterval(function() {
+
+function bioreactorBegin() {
+  co2Setup();
+}
+
+/** Read the CO2 concentration */
+var co2Comm = setInterval(function(buf) {
+  //if (time.secs%30 >10 && time.secs%30<=15) {
+
+    // we hope we transfered 9 bits, 
+    i2c.writeTo(0x4d, [reg.fcr, 0x07]);
+    i2c.writeTo(0x4d, reg.txlvl);
+    if (i2c.readFrom(0x4d, 1)[0] >= readPPM.length) {
+      i2c.writeTo(0x4d, [reg.thr, readPPM]);
+    }
+    rx = 0;
+    i2c.writeTo(0x4d, reg.rxlvl);
+    setTimeout(function() {
+      rx = i2c.readFrom(0x4d, 1);
+
+      // Only read the first 9 bits
+      if (rx[0]>9) {
+        rx[0] = 9;
+      }
+
+      i2c.writeTo(0x4d, reg.rhr);
+      buf = i2c.readFrom(0x4d, rx);
+
+      // Read the current value from the buffer 
+      // bytes (2 - 5) are the actual values of the co2
+      co2PID.current = buf[2]<<24 | buf[3]<<16 | buf[4]<<8 | buf[5];
+    }, 50);
+  //}
+}, readTime*5);
+
+// This allows us to just read the value
+var phComm = setInterval(function() {
   i2c.writeTo(99, 'R');
   setTimeout(function() {
     phData = i2c.readFrom(99, 21);
@@ -181,41 +217,16 @@ function getSum(total, num) {
     }
     ph = strData.join("");
   }, 900);
-}, readTime);*/
-
-function bioreactorBegin() {
-  co2Setup();
-}
-
-/** Read the CO2 concentration */
-var co2Comm = setInterval(function(buf) {
-  //if (time.secs%30 >10 && time.secs%30<=15) {
-    i2c.writeTo(0x4d, [reg.fcr, 0x07]);
-    i2c.writeTo(0x4d, reg.txlvl);
-    if (i2c.readFrom(0x4d, 1)[0] >= readPPM.length) {
-      i2c.writeTo(0x4d, [reg.thr, readPPM]);
-    }
-    rx = 0;
-    i2c.writeTo(0x4d, reg.rxlvl);
-    setTimeout(function() {
-      rx = i2c.readFrom(0x4d, 1);
-      if (rx[0]>9) {
-        rx[0] = 9;
-      }
-      i2c.writeTo(0x4d, reg.rhr);
-      buf = i2c.readFrom(0x4d, rx);
-      co2PID.current = buf[2]<<24 | buf[3]<<16 | buf[4]<<8 | buf[5];
-    }, 50);
-  //}
 }, readTime*5);
 
-/** Communicate with EZO pH */
+// Allowes us to communicate using any command
+/** Communicate with EZO pH
 var phComm = setInterval(function() {
 //  if (time.secs%30 >0 && time.secs%30<=5) {
-    i2c.writeTo(99, 'R');
-    if (comm.toLowerCase() != 'sleep') {
+    i2c.writeTo(99, 'R'); // 99 is the address
+    // if (comm.toLowerCase() != 'sleep') {
       setTimeout(function() {
-        phData = i2c.readFrom(99, 21);
+        phData = i2c.readFrom(99, 21); // Reading 21 bytes
         strData = [];
         for (var i=1; i<phData.length; i++) {
           if (phData[i]!==0) {
@@ -228,16 +239,18 @@ var phComm = setInterval(function() {
           phReturn = strData.join("");
         }
       }, 900);
-    }
+    // }
 //  }
 }, readTime*5);
+*/
 
 /** Read the temperature */
 var tempComm = setInterval(function() {
   var temp = 0;
-  tempData = spi.send([0,0,0,0], cs);
+  tempData = spi.send([0,0,0,0], cs); // cs is the chip select
   temp = tempData[0]<<24 | tempData[1]<<16 | tempData[2]<<8 | tempData[3];
 
+  // This means we got a weird value
   if (temp & 0x7) {
     tempPID.current = NaN;
   }
@@ -247,7 +260,9 @@ var tempComm = setInterval(function() {
   } else {
     temp>>=18;
   }
-  tempPID.current = temp/4;
+
+  tempPID.current = temp / 4;
+
 }, readTime*5);
 
 /** Advance time counter */
