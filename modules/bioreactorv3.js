@@ -53,7 +53,8 @@ var Time = function (){
   this.secs  = 0;
 };
 
-var time = new Time()
+var time = new Time();
+
 var co2Time = new Time();
 var phTime = new Time();
 var tempTime = new Time();
@@ -61,12 +62,12 @@ var tempTime = new Time();
 var readTime = 1000;
 
 function co2Setup() {
-  i2c.writeTo(0x4d, [reg.iocontrol, 0x08]);
-  i2c.writeTo(0x4d, [reg.fcr, 0x07]);
-  i2c.writeTo(0x4d, [reg.lcr, 0x83]);
-  i2c.writeTo(0x4d, [reg.dll, 0x60]);
-  i2c.writeTo(0x4d, [reg.dlh, 0x00]);
-  i2c.writeTo(0x4d, [reg.lcr, 0x03]);
+  i2c.writeTo(0x4d, [reg.iocontrol, 0x08]); // UART software Reset
+  i2c.writeTo(0x4d, [reg.fcr, 0x07]);       // TX/RX FIFO Enable
+  i2c.writeTo(0x4d, [reg.lcr, 0x83]);       // Enabling divisor latch, with word length of 2 bits
+  i2c.writeTo(0x4d, [reg.dll, 0x60]);       // Divisor latch low, 16 bit, baud 1200 (maybe)
+  i2c.writeTo(0x4d, [reg.dlh, 0x00]);       // Divisor latch high, 16 bit, baud 1200 (maybe)
+  i2c.writeTo(0x4d, [reg.lcr, 0x03]);       // Disable latch, word length 2 bits
 }
 
 var co2PID = {
