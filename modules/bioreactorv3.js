@@ -54,9 +54,17 @@ var time = {
   secs  : 0
 };
 
-var co2Time = Object.create(time);
-var phTime = Object.create(time);
-var tempTime = Object.create(time);
+var Time = function (){
+  self.days  = 0;
+  self.hours = 0;
+  self.mins  = 0;
+  self.secs  = 0;
+};
+
+var co2Time = new Time();
+var phTime = new Time();
+var tempTime = new Time():
+
 var readTime = 1000;
 
 function co2Setup() {
@@ -354,7 +362,7 @@ var updateActuators = setInterval(function() {
   }
   if (bioData.phOn) {
     biodata.phOn = false;
-  }*/
+  }
 }, readTime);
 
 /** Store Samples */
