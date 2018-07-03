@@ -1,5 +1,4 @@
-/* =============== Initialise the variables and board ================
- */
+/* ========== Initialise the variables and board =========== 
 require("Wifi").restore();
 //Uncomment the following lines to connect to wifi
 //wifi.connect("WWU-Aruba-HWauth", {authMode:0});
@@ -76,7 +75,8 @@ var co2PID = {
   tolerance : readTime,
   offTime   : 30*readTime,
   onTime    : 0,
-  samples   : []
+  samples   : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+               0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 };
 var phPID = {
   P         : 0.2,
@@ -88,7 +88,8 @@ var phPID = {
   tolerance : 0.5,
   offTime   : 5*60*readTime,
   onTime    : 0,
-  samples   : []
+  samples   : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+               0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 };
 var tempPID = {
   P         : 100,
@@ -100,7 +101,8 @@ var tempPID = {
   tolerance : 1.5,
   offTime   : 14*readTime,
   onTime    : 0,
-  samples   : []
+  samples   : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+               0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 };
 
 var actuators = {
@@ -113,15 +115,15 @@ var actuators = {
 };
 
 var bioData = {
-  //ph        : phPID.current,
-  //phAvg     : 0,
-  //phValve   : 0,
-  //co2       : co2PID.current,
-  //co2Avg    : 0,
-  //co2Valve  : 0,
+  ph        : phPID.current,
+  phAvg     : 0,
+  phOn      : 0,
+  co2       : co2PID.current,
+  co2Avg    : 0,
+  co2On     : 0,
   temp      : tempPID.current,
   tempAvg   : 0,
-  tempValve : 0,
+  tempOn    : 0,
   time      : time
 };
 
@@ -182,7 +184,7 @@ function bioreactorBegin() {
 
 /** Read the CO2 concentration */
 var co2Comm = setInterval(function(buf) {
-  if (time.secs%30 >10 && time.secs%30<=15) {
+  //if (time.secs%30 >10 && time.secs%30<=15) {
     i2c.writeTo(0x4d, [reg.fcr, 0x07]);
     i2c.writeTo(0x4d, reg.txlvl);
     if (i2c.readFrom(0x4d, 1)[0] >= readPPM.length) {
@@ -199,7 +201,7 @@ var co2Comm = setInterval(function(buf) {
       buf = i2c.readFrom(0x4d, rx);
       co2PID.current = buf[2]<<24 | buf[3]<<16 | buf[4]<<8 | buf[5];
     }, 50);
-  }
+  //}
 }, readTime*5);
 
 /** Communicate with EZO pH */
@@ -260,61 +262,64 @@ var advanceTime = setInterval(function() {
   }
 }, readTime);
 
-/** Publish data to console */
+/** Publish data to console every 10 seconds */
 var dataComm = setInterval(function() {
   //update current values
-  //bioData.ph = phPID.current;
-  //bioData.co2 = co2PID.current;
+  bioData.ph = phPID.current;
+  bioData.co2 = co2PID.current;
   bioData.temp = tempPID.current;
 
   //update averages
-  if (//phPID.samples.length>0 &&
-      //co2PID.samples.length>0 &&
-      tempPID.samples.length>0) {
-    //bioData.phAvg = phPID.samples.reduce(getSum)/phPID.samples.length;
-    //bioData.co2Avg = co2PID.samples.reduce(getSum)/co2PID.samples.length;
+  if (phPID.samples[39] !== 0 &&
+      co2PID.samples[39] !== 0 &&
+      tempPID.samples[39] !== 0) {
+    bioData.phAvg = phPID.samples.reduce(getSum)/phPID.samples.length;
+    bioData.co2Avg = co2PID.samples.reduce(getSum)/co2PID.samples.length;
     bioData.tempAvg = tempPID.samples.reduce(getSum)/tempPID.samples.length;
   } else {
-    //bioData.phAvg = 0;
-    //bioData.co2Avg = 0;
+    bioData.phAvg = 0;
+    bioData.co2Avg = 0;
     bioData.tempAvg = 0;
   }
 
+  /* Research better ways of doing debug
   //update actuator values (mainly for debug)
-  //bioData.phValve = actuators.phValve;
-  //bioData.co2Valve = digitalRead(actuators.co2Valve);
+  bioData.phValve = actuators.phValve;
+  bioData.co2Valve = digitalRead(actuators.co2Valve);
 
-  //update time and print data
+  //update time and print data*/
   bioData.time = time;
   console.log(bioData);
 }, readTime*5);
 
 /** Update Actuators */
 var updateActuators = setInterval(function() {
-/*  if (!digitalRead(actuators.co2Valve) &&
-        timeComp(co2Time, time, co2PID.offTime) &&
-        ppm<co2PID.target) {
+  if (!bioData.co2On &&
+      timeComp(co2Time, time, co2PID.offTime) &&
+      ppm<co2PID.target) {
     digitalWrite(actuators.co2Valve, actuators.on);
+    bioData.co2On = true;
     setTime(co2Time);
     co2PID.onTime = actuators.co2ValveResponseOffset +
-                    co2PID.P*(ppm-co2PID.target) +
-                    co2PID.I*(co2PID.target-co2PID.average) +
-                    co2PID.D*(ppm-ppm0);
+      co2PID.P*(ppm-co2PID.target) +
+      co2PID.I*(co2PID.target-co2PID.average) +
+      co2PID.D*(ppm-ppm0);
     ppm0 = ppm;
   }
-  if (digitalRead(actuators.co2Valve) &&
-               (ppm>=co2PID.target ||
-                  timeComp(co2Time, time, co2PID.onTime))) {
+  if (bioData.co2On &&
+      (ppm>=co2PID.target ||
+       timeComp(co2Time, time, co2PID.onTime))) {
     digitalWrite(actuators.co2Valve, actuators.off);
+    bioData.co2On = false;
     setTime(co2Time);
-  }*/
+  }
 
-  if (!bioData.tempValve &&
+  if (!bioData.tempOn &&
       timeInterval(time)>tempPID.offTime*4 &&
       tempPID.current<tempPID.target &&
       timeComp(tempTime, time, tempPID.offTime)) {
     digitalWrite(actuators.tempValve, actuators.on);
-    bioData.tempValve = true;
+    bioData.tempOn = true;
     setTime(tempTime);
     tempPID.onTime = 5 +
                     tempPID.P*(tempPID.target-tempPID.current) +
@@ -323,19 +328,20 @@ var updateActuators = setInterval(function() {
     tempPID.last = tempPID.current;
     console.log('on update');
   }
-  if (bioData.tempValve &&
+  if (bioData.tempOn &&
       (tempPID.current>=tempPID.target ||
        timeComp(tempTime, time, tempPID.onTime*4))) {
     digitalWrite(actuators.tempValve, actuators.off);
-    bioData.tempValve = false;
+    bioData.temOn = false;
     setTime(tempTime);
     console.log('off update');
   }
 
-/*  if (!actuators.phValve &&
+  if (!bioData.phOn &&
         timeComp(phTime, time, phPID.offTime) &&
         ph<phPID.target) {
-    digitalWrite(actuators.phValve, actuators.on);
+    oneDropNaOH();
+    bioData.phOn = true;
     setTime(phTime);
     phPID.onTime = actuators.phValveResponseOffset +
                     phPID.P*(ph-phPID.target) +
@@ -343,11 +349,8 @@ var updateActuators = setInterval(function() {
                     phPID.D*(ph-ph0);
     ph0 = ph;
   }
-  if (digitalRead(actuators.phValve) &&
-               (ph>=phPID.target ||
-                  timeComp(phTime, time, phPID.onTime))) {
-    actuators.phValve = 1;
-    setTime(phTime);
+  if (bioData.phOn) {
+    biodata.phOn = false;
   }*/
 }, readTime);
 
