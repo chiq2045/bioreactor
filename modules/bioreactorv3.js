@@ -1,4 +1,5 @@
-/* ========== Initialise the variables and board =========== 
+//adding new comments
+/* ========== Initialise the variables and board ===========
 require("Wifi").restore();
 //Uncomment the following lines to connect to wifi
 //wifi.connect("WWU-Aruba-HWauth", {authMode:0});
