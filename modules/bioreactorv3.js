@@ -46,13 +46,6 @@ var phReturn; //possibly no use
 
 var tempData = [];
 
-var time = {
-  days  : 0,
-  hours : 0,
-  mins  : 0,
-  secs  : 0
-};
-
 var Time = function (){
   this.days  = 0;
   this.hours = 0;
@@ -60,6 +53,7 @@ var Time = function (){
   this.secs  = 0;
 };
 
+var time = new Time()
 var co2Time = new Time();
 var phTime = new Time();
 var tempTime = new Time();
