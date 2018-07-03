@@ -53,9 +53,9 @@ var time = {
   secs  : 0
 };
 
-var co2Time = time;
-var phTime = time;
-var tempTime = time;
+var co2Time = Object.create(time);
+var phTime = Object.create(time);
+var tempTime = Object.create(time);
 var readTime = 1000;
 
 function co2Setup() {
@@ -145,7 +145,7 @@ function timeComp(t1, t, intvl) {
   if ((timeInterval(t)-timeInterval(t1))>=intvl) {
     return true;
   } else {
-  return false;
+    return false;
   }
 }
 
