@@ -8,6 +8,8 @@ require("Wifi").restore();
 //wifi.startAP("Bioreactor-ESP", {authMode:0});
 //wifi.disconnect();
 
+/* Dustin was here */
+
 /** =============== Setup Communication Protocols ====================
  * We will be using I2C for pH and CO2 sensors, and SPI for
  * temperature sensor. Seeing as ESP8266 does not have hardware
