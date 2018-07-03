@@ -54,10 +54,10 @@ var time = {
 };
 
 var Time = function (){
-  self.days  = 0;
-  self.hours = 0;
-  self.mins  = 0;
-  self.secs  = 0;
+  this.days  = 0;
+  this.hours = 0;
+  this.mins  = 0;
+  this.secs  = 0;
 };
 
 var co2Time = new Time();
