@@ -83,6 +83,7 @@ var co2PID = {
   samples   : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 };
+
 var phPID = {
   P         : 0.2,
   I         : 0.3,
@@ -96,6 +97,7 @@ var phPID = {
   samples   : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 };
+
 var tempPID = {
   P         : 100,
   I         : 50,
@@ -145,11 +147,7 @@ function clearArray(ar) {
 }
 
 function timeComp(t1, t, intvl) {
-  if ((timeInterval(t)-timeInterval(t1))>=intvl) {
-    return true;
-  } else {
-    return false;
-  }
+  return ((timeInterval(t)-timeInterval(t1))>=intvl) 
 }
 
 function timeInterval(t) {
