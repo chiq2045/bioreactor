@@ -20,6 +20,8 @@ var spi = new SPI();
 spi.setup({miso:NodeMCU.D5, sck:NodeMCU.D7});
 var cs = NodeMCU.D6;
 
+var http = require("http");
+
 /** =============== Setup Non-Controllable Variables =================
  * These variables are static (PRIVATE)
  */
@@ -168,6 +170,23 @@ function getSum(total, num) {
 /* =============== Main functions =============== */
 /** Read the pH */
 
+function postData(data){
+  content = JSON.stringify(data);
+  var options = {
+    host: '172.25.16.152',
+    port: '1337',
+    path:'/newdata',
+    method:'POST',
+  };
+  require("http").request(options, function(res)  {
+    var d = "";
+    res.on('data', function(data) { d += data; });
+    res.on('close', function(data) {
+      console.log("Closed: " + d);
+    })
+  }).end(content);
+}
+
 function bioreactorBegin() {
   co2Setup();
 }
@@ -307,7 +326,14 @@ var dataComm = setInterval(function() {
 
   //update time and print data*/
   bioData.time = time;
+
+  var post_data = {
+    data = bioData,
+    type = "new entry"
+  }
+
   console.log(bioData);
+  postData(bioData);
 }, readTime*5);
 
 /** Update Actuators */
