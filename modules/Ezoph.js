@@ -5,10 +5,12 @@ var exports = {};
 
 //Private constants
 var C = {
-  read     : 'R',
-  calLow   : 'Cal,low,4.00',
-  calMid   : 'Cal,mid,7.00',
-  calHigh  : 'Cal,high,10.00'
+  read      : 'R',
+  calLow    : 'Cal,low,4.00',
+  calMid    : 'Cal,mid,7.00',
+  calHigh   : 'Cal,high,10.00',
+  readTime  : 900, //It takes 900ms to do a read
+  otherTime : 300, //It takes 300ms to do most other things
 };
 
 /**
@@ -27,8 +29,6 @@ function Ezoph(i2c, address) {
  * Public Constants (mainly used for debugging)
  */
 Ezoph.prototype.C = {
-  command,
-  data,
 };
 
 /** ------------------ Common functions --------------------- */
@@ -37,9 +37,10 @@ Ezoph.prototype.C = {
  * Reads ph
  * @returns {String} data - value returned from device
  */
-Ezoph.prototype.read = function() {
+Ezoph.prototype.read = function(callback, timeout) {
+  if (timeout === undefined) { timeout = C.readTime; }
   this.sendCommand(C.read);
-  return this.getData();
+  this.getData(callback, timeout);
 };
 
 /**
@@ -97,32 +98,36 @@ Ezoph.prototype.sendCommand = function(comm) {
 
 /**
  * Retreive data from device
- * @returns {String} value - String returned from device
+ * @callback callback - value of the data reived from device
  */
-Ezoph.prototype.getData = function() {
-  //initialaize array
-  var data;
-
+Ezoph.prototype.getData = function(callback, timeout) {
   //receive data from device after 900ms
+  var addr = this.address;
+  var data = this.C.data;
   if ( this.C.command.toLowerCase() != "sleep" ) {
     setTimeout(function() {
-      data = this.i2c.readFrom(this.address, 21);},900);
-  }
-  this.C.data = data;
 
-  //changes received data to a string
-  var strArray = [];
-  if (data[0] == 1) {
-    for ( i=1; i<data.length; i++ ) {
-      if (data[i]!==0) {
-        strArray.push(String.fromCharCode(data[i]));
+      data = this.i2c.readFrom(addr, 21);
+      console.log('here');
+
+      console.log(this.address);
+
+      //changes received data to a string
+      var strArray = [];
+      if (data[0] == 1) {
+        for ( i=1; i<data.length; i++ ) {
+          if (data[i]!==0) {
+            strArray.push(String.fromCharCode(data[i]));
+          }
+        }
       }
-    }
-  }
 
-  //concatenates the string so that it actually looks like a srting rather than an array
-  this.value = strArray.join("");
-  return this.value;
+      //concatenates the string so that it actually looks like a srting rather than an array
+      callback(strArray.join(""));
+    },timeout);
+  } else {
+     callback(null); 
+  }
 };
 
 /** ---------------------- Exports ------------------------- */
