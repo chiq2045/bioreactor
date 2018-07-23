@@ -1,4 +1,5 @@
-/* =============== Initialise the variables and board =============== */
+//adding new comments
+/* ========== Initialise the variables and board ===========
 require("Wifi").restore();
 //Uncomment the following lines to connect to wifi
 //wifi.connect("WWU-Aruba-HWauth", {authMode:0});
@@ -7,12 +8,24 @@ require("Wifi").restore();
 //wifi.startAP("Bioreactor-ESP", {authMode:0});
 //wifi.disconnect();
 
+/* Dustin was here */
+
+/** =============== Setup Communication Protocols ====================
+ * We will be using I2C for pH and CO2 sensors, and SPI for
+ * temperature sensor. Seeing as ESP8266 does not have hardware
+ * I2c and SPI, we need to setup software communication.
+ */
 var i2c = new I2C();
 i2c.setup({scl:NodeMCU.D2, sda:NodeMCU.D3});
 var spi = new SPI();
 spi.setup({miso:NodeMCU.D5, sck:NodeMCU.D7});
 var cs = NodeMCU.D6;
 
+var http = require("http");
+
+/** =============== Setup Non-Controllable Variables =================
+ * These variables are static (PRIVATE)
+ */
 var reg = {
   iocontrol  : 0x0e<<3,
   fcr        : 0x02<<3,
@@ -25,15 +38,6 @@ var reg = {
   rxlvl      : 0x09<<3
 };
 
-var co2Setup = function() {
-  i2c.writeTo(0x4d, [reg.iocontrol, 0x08]);
-  i2c.writeTo(0x4d, [reg.fcr, 0x07]);
-  i2c.writeTo(0x4d, [reg.lcr, 0x83]);
-  i2c.writeTo(0x4d, [reg.dll, 0x60]);
-  i2c.writeTo(0x4d, [reg.dlh, 0x00]);
-  i2c.writeTo(0x4d, [reg.lcr, 0x03]);
-};
-
 var readPPM = [0xFF,0x01,0x9C,0x00,0x00,0x00,0x00,0x00,0x63];
 var buf = [];
 var rx = 0;
@@ -41,21 +45,33 @@ var co2Data = [];
 
 var phData = [];
 var strData = [];
-var phReturn;
+var phReturn; //possibly no use
 
 var tempData = [];
 
-var time = {
-  days  : 0,
-  hours : 0,
-  mins  : 0,
-  secs  : 0
+var Time = function (){
+  this.days  = 0;
+  this.hours = 0;
+  this.mins  = 0;
+  this.secs  = 0;
 };
 
-var co2Time = time;
-var phTime = time;
-var tempTime = time;
+var time = new Time();
+
+var co2Time = new Time();
+var phTime = new Time();
+var tempTime = new Time();
+
 var readTime = 1000;
+
+function co2Setup() {
+  i2c.writeTo(0x4d, [reg.iocontrol, 0x08]); // UART software Reset
+  i2c.writeTo(0x4d, [reg.fcr, 0x07]);       // TX/RX FIFO Enable
+  i2c.writeTo(0x4d, [reg.lcr, 0x83]);       // Enabling divisor latch, with word length of 2 bits
+  i2c.writeTo(0x4d, [reg.dll, 0x60]);       // Divisor latch low, 16 bit, baud 1200 (maybe)
+  i2c.writeTo(0x4d, [reg.dlh, 0x00]);       // Divisor latch high, 16 bit, baud 1200 (maybe)
+  i2c.writeTo(0x4d, [reg.lcr, 0x03]);       // Disable latch, word length 2 bits
+}
 
 var co2PID = {
   P         : 0.01,
@@ -67,8 +83,10 @@ var co2PID = {
   tolerance : readTime,
   offTime   : 30*readTime,
   onTime    : 0,
-  samples   : []
+  samples   : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+               0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 };
+
 var phPID = {
   P         : 0.2,
   I         : 0.3,
@@ -79,8 +97,10 @@ var phPID = {
   tolerance : 0.5,
   offTime   : 5*60*readTime,
   onTime    : 0,
-  samples   : []
+  samples   : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+               0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 };
+
 var tempPID = {
   P         : 100,
   I         : 50,
@@ -91,14 +111,14 @@ var tempPID = {
   tolerance : 1.5,
   offTime   : 14*readTime,
   onTime    : 0,
-  samples   : []
+  samples   : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+               0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 };
 
 var actuators = {
   on        : true,
   off       : false,
   co2Valve  : NodeMCU.D4,
-  phValve   : 0,
   phStep    : NodeMCU.D1,
   phDir     : NodeMCU.D0,
   tempValve : NodeMCU.D8
@@ -107,13 +127,13 @@ var actuators = {
 var bioData = {
   ph        : phPID.current,
   phAvg     : 0,
-  phValve   : actuators.phValve,
+  phOn      : 0,
   co2       : co2PID.current,
   co2Avg    : 0,
-  co2Valve  : digitalRead(actuators.co2Valve),
+  co2On     : 0,
   temp      : tempPID.current,
   tempAvg   : 0,
-  tempValve : digitalRead(actuators.tempValve),
+  tempOn    : 0,
   time      : time
 };
 
@@ -130,11 +150,7 @@ function clearArray(ar) {
 }
 
 function timeComp(t1, t, intvl) {
-  if ((timeInterval(t)-timeInterval(t1))>=intvl) {
-    return true;
-  } else {
-  return false;
-  }
+  return ((timeInterval(t)-timeInterval(t1))>=intvl) 
 }
 
 function timeInterval(t) {
@@ -154,7 +170,60 @@ function getSum(total, num) {
 
 /* =============== Main functions =============== */
 /** Read the pH */
-/*var phComm = setInterval(function() {
+
+function postData(data){
+  content = JSON.stringify(data);
+  var options = {
+    host: '172.25.16.152',
+    port: '1337',
+    path:'/newdata',
+    method:'POST',
+  };
+  require("http").request(options, function(res)  {
+    var d = "";
+    res.on('data', function(data) { d += data; });
+    res.on('close', function(data) {
+      console.log("Closed: " + d);
+    })
+  }).end(content);
+}
+
+function bioreactorBegin() {
+  co2Setup();
+}
+
+/** Read the CO2 concentration */
+var co2Comm = setInterval(function(buf) {
+  //if (time.secs%30 >10 && time.secs%30<=15) {
+
+    // we hope we transfered 9 bits, 
+    i2c.writeTo(0x4d, [reg.fcr, 0x07]);
+    i2c.writeTo(0x4d, reg.txlvl);
+    if (i2c.readFrom(0x4d, 1)[0] >= readPPM.length) {
+      i2c.writeTo(0x4d, [reg.thr, readPPM]);
+    }
+    rx = 0;
+    i2c.writeTo(0x4d, reg.rxlvl);
+    setTimeout(function() {
+      rx = i2c.readFrom(0x4d, 1);
+
+      // Only read the first 9 bits
+      if (rx[0]>9) {
+        rx[0] = 9;
+      }
+
+      i2c.writeTo(0x4d, reg.rhr);
+      buf = i2c.readFrom(0x4d, rx);
+
+      // Read the current value from the buffer 
+      // bytes (2 - 5) are the actual values of the co2
+      co2PID.current = buf[2]<<24 | buf[3]<<16 | buf[4]<<8 | buf[5];
+    }, 50);
+  //}
+}, readTime*5);
+
+// This allows us to just read the value
+var phComm = setInterval(function() {
   i2c.writeTo(99, 'R');
   setTimeout(function() {
     phData = i2c.readFrom(99, 21);
@@ -166,80 +235,40 @@ function getSum(total, num) {
     }
     ph = strData.join("");
   }, 900);
-}, readTime);*/
+}, readTime*5);
 
-function bioreactorBegin() {
-  co2Setup();
-  var getTime = setInterval(function(){ advanceTime(); }, readTime);
-}
-
-var startDataCollection = setInterval(function() {
-  if (time.secs == 5 || time.secs == 35) { //read ph twice a minute
-    readPH();
-  }
-
-  if (time.secs == 15 || time.secs == 45) { //read co2 twice a minute
-    readCO2(buf);
-  }
-
-  if (time.secs%10 === 0) { //read temp every 10 seconds, print Data every 10 seconds
-    readTemp();
-    printData();
-  }
-}, readTime);
-
-/** Read the CO2 concentration */
-function readCO2(buf) {
-  i2c.writeTo(0x4d, [reg.fcr, 0x07]);
-  i2c.writeTo(0x4d, reg.txlvl);
-  if (i2c.readFrom(0x4d, 1)[0] >= readPPM.length) {
-    i2c.writeTo(0x4d, [reg.thr, readPPM]);
-  }
-  rx = 0;
-  i2c.writeTo(0x4d, reg.rxlvl);
-  setTimeout(function() {
-    rx = i2c.readFrom(0x4d, 1);
-    if (rx[0]>9) {
-      rx[0] = 9;
-    }
-    i2c.writeTo(0x4d, reg.rhr);
-    buf = i2c.readFrom(0x4d, rx);
-    co2PID.current = buf[2]<<24 | buf[3]<<16 | buf[4]<<8 | buf[5];
-  }, 50);
-}
-
-/** Communicate with EZO pH */
-function phComm(comm) {
-  i2c.writeTo(99, comm);
-  if (comm.toLowerCase() != 'sleep') {
-    setTimeout(function() {
-      phData = i2c.readFrom(99, 21);
-      strData = [];
-      for (var i=1; i<phData.length; i++) {
-        if (phData[i]!==0) {
-          strData.push(String.fromCharCode(phData[i]));
+// Allowes us to communicate using any command
+/** Communicate with EZO pH
+var phComm = setInterval(function() {
+//  if (time.secs%30 >0 && time.secs%30<=5) {
+    i2c.writeTo(99, 'R'); // 99 is the address
+    // if (comm.toLowerCase() != 'sleep') {
+      setTimeout(function() {
+        phData = i2c.readFrom(99, 21); // Reading 21 bytes
+        strData = [];
+        for (var i=1; i<phData.length; i++) {
+          if (phData[i]!==0) {
+            strData.push(String.fromCharCode(phData[i]));
+          }
         }
-      }
-      if (comm.toLowerCase() == 'r') {
-        phPID.current = parseFloat(strData.join(""));
-      } else {
-        phReturn = strData.join("");
-      }
-    }, 900);
-  }
-}
-
-/** Read ph */
-function readPH() {
-  phComm('R');
-}
+        if (comm.toLowerCase() == 'r') {
+          phPID.current = parseFloat(strData.join(""));
+        } else {
+          phReturn = strData.join("");
+        }
+      }, 900);
+    // }
+//  }
+}, readTime*5);
+*/
 
 /** Read the temperature */
-function readTemp() {
+var tempComm = setInterval(function() {
   var temp = 0;
-  tempData = spi.send([0,0,0,0], cs);
+  tempData = spi.send([0,0,0,0], cs); // cs is the chip select
   temp = tempData[0]<<24 | tempData[1]<<16 | tempData[2]<<8 | tempData[3];
 
+  // This means we got a weird value
   if (temp & 0x7) {
     tempPID.current = NaN;
   }
@@ -249,11 +278,13 @@ function readTemp() {
   } else {
     temp>>=18;
   }
-  tempPID.current = temp/4;
-}
+
+  tempPID.current = temp / 4;
+
+}, readTime*5);
 
 /** Advance time counter */
-function advanceTime() {
+var advanceTime = setInterval(function() {
   time.secs++;
   if (time.secs>=60) {
     time.secs = 0;
@@ -267,19 +298,19 @@ function advanceTime() {
       }
     }
   }
-}
+}, readTime);
 
-/** Publish data to console */
-function printData() {
+/** Publish data to console every 10 seconds */
+var dataComm = setInterval(function() {
   //update current values
   bioData.ph = phPID.current;
   bioData.co2 = co2PID.current;
   bioData.temp = tempPID.current;
 
   //update averages
-  if (phPID.samples.length>0 &&
-      co2PID.samples.length>0 &&
-      tempPID.samples.length>0) {
+  if (phPID.samples[39] !== 0 &&
+      co2PID.samples[39] !== 0 &&
+      tempPID.samples[39] !== 0) {
     bioData.phAvg = phPID.samples.reduce(getSum)/phPID.samples.length;
     bioData.co2Avg = co2PID.samples.reduce(getSum)/co2PID.samples.length;
     bioData.tempAvg = tempPID.samples.reduce(getSum)/tempPID.samples.length;
@@ -289,58 +320,73 @@ function printData() {
     bioData.tempAvg = 0;
   }
 
+  /* Research better ways of doing debug
   //update actuator values (mainly for debug)
-  bioDataphValve = actuators.phValve;
+  bioData.phValve = actuators.phValve;
   bioData.co2Valve = digitalRead(actuators.co2Valve);
-  bioData.tempValve = digitalRead(actuators.tempValve);
 
-  //update time and print data
+  //update time and print data*/
   bioData.time = time;
+
+  var post_data = {
+    data = bioData,
+    type = "new entry"
+  }
+
   console.log(bioData);
-}
+  postData(bioData);
+}, readTime*5);
 
 /** Update Actuators */
-/*var updateActuators = setInterval(function() {
-  if (!digitalRead(actuators.co2Valve) &&
-        timeComp(co2Time, time, co2PID.offTime) &&
-        ppm<co2PID.target) {
+var updateActuators = setInterval(function() {
+  if (!bioData.co2On &&
+      timeComp(co2Time, time, co2PID.offTime) &&
+      ppm<co2PID.target) {
     digitalWrite(actuators.co2Valve, actuators.on);
+    bioData.co2On = true;
     setTime(co2Time);
     co2PID.onTime = actuators.co2ValveResponseOffset +
-                    co2PID.P*(ppm-co2PID.target) +
-                    co2PID.I*(co2PID.target-co2PID.average) +
-                    co2PID.D*(ppm-ppm0);
+      co2PID.P*(ppm-co2PID.target) +
+      co2PID.I*(co2PID.target-co2PID.average) +
+      co2PID.D*(ppm-ppm0);
     ppm0 = ppm;
   }
-  if (digitalRead(actuators.co2Valve) &&
-               (ppm>=co2PID.target ||
-                  timeComp(co2Time, time, co2PID.onTime))) {
+  if (bioData.co2On &&
+      (ppm>=co2PID.target ||
+       timeComp(co2Time, time, co2PID.onTime))) {
     digitalWrite(actuators.co2Valve, actuators.off);
+    bioData.co2On = false;
     setTime(co2Time);
   }
 
-  if (!digitalRead(actuators.tempValve) &&
-        timeComp(tempTime, time, tempPID.offTime) &&
-        temp<tempPID.target) {
+  if (!bioData.tempOn &&
+      timeInterval(time)>tempPID.offTime*4 &&
+      tempPID.current<tempPID.target &&
+      timeComp(tempTime, time, tempPID.offTime)) {
     digitalWrite(actuators.tempValve, actuators.on);
+    bioData.tempOn = true;
     setTime(tempTime);
-    tempPID.onTime = actuators.tempValveResponseOffset +
-                    tempPID.P*(temp-tempPID.target) +
+    tempPID.onTime = 5 +
+                    tempPID.P*(tempPID.target-tempPID.current) +
                     tempPID.I*(tempPID.target-tempPID.average) +
-                    tempPID.D*(temp-temp0);
-    temp0 = temp;
+                    tempPID.D*(tempPID.current-tempPID.last);
+    tempPID.last = tempPID.current;
+    console.log('on update');
   }
-  if (digitalRead(actuators.tempValve) &&
-               (temp>=tempPID.target ||
-                  timeComp(tempTime, time, tempPID.onTime))) {
+  if (bioData.tempOn &&
+      (tempPID.current>=tempPID.target ||
+       timeComp(tempTime, time, tempPID.onTime*4))) {
     digitalWrite(actuators.tempValve, actuators.off);
+    bioData.temOn = false;
     setTime(tempTime);
+    console.log('off update');
   }
 
-  if (!actuators.phValve &&
+  if (!bioData.phOn &&
         timeComp(phTime, time, phPID.offTime) &&
         ph<phPID.target) {
-    digitalWrite(actuators.phValve, actuators.on);
+    oneDropNaOH();
+    bioData.phOn = true;
     setTime(phTime);
     phPID.onTime = actuators.phValveResponseOffset +
                     phPID.P*(ph-phPID.target) +
@@ -348,13 +394,10 @@ function printData() {
                     phPID.D*(ph-ph0);
     ph0 = ph;
   }
-  if (digitalRead(actuators.phValve) &&
-               (ph>=phPID.target ||
-                  timeComp(phTime, time, phPID.onTime))) {
-    actuators.phValve = 1;
-    setTime(phTime);
+  if (bioData.phOn) {
+    biodata.phOn = false;
   }
-}, readTime);*/
+}, readTime);
 
 /** Store Samples */
 /*var storeSamples = setInterval(function() {
