@@ -133,11 +133,12 @@ Ezoph.prototype.getData = function(callback, timeout) {
 /** ---------------------- Exports ------------------------- */
 
 /** This is 'exported' so it can be used with `require('Ezoph.js').connect(pin1,pin2)` */
-exports.connect = function(i2c, address) {
-  return new Ezoph(i2c,address);
-};
+// exports.connect = function(i2c, address) {
+//   return new Ezoph(i2c,address);
+// };
 
-var i2c = new I2C();
-i2c.setup({scl:NodeMCU.D1, sda:NodeMCU.D2});
-var ph = exports.connect(i2c, 0x63);
+// var i2c = new I2C();
+// i2c.setup({scl:NodeMCU.D1, sda:NodeMCU.D2});
+// var ph = exports.connect(i2c, 0x63);
 
+exports = Ezoph;
