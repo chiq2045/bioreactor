@@ -1,9 +1,7 @@
 /* Interract with MH-Z16 NDIR CO2 Sensor with I2C/UART Interface Board from Sandbox Electronics
 https://sandboxelectronics.com/?product=mh-z16-ndir-co2-sensor-with-i2cuart-5v3-3v-interface-for-arduinoraspeberry-pi */
 
-var exports = {};
-
-var C = {
+var reg = {
   /**
    * Register set for SC16IS750PW I2C/UART bridge
    * check part 8 on the datasheet for more information
@@ -50,12 +48,14 @@ var C = {
  * Make a new instance of the MH_Z16 sensor with SC16IS750PW I2C/UART bridge
  * @param {Object} i2c - an instance of an I2C object
  * @param {int} address - the address of device (default is 0x9a)
+ * @return {int} - the co2 concentration measured by the device
  */
-function mh_z16(i2c, address) {
+function mh_z16( i2c, address ) {
   this.i2c = i2c;
   this.address = address;
   this.ppm = 0;
 }
+exports = mh_z16;
 
 /**
  * Public Constants
@@ -71,24 +71,25 @@ mh_z16.prototype.C = {
  */
 mh_z16.prototype.begin = function() {
   var ad = this.address;
-  this.i2c.writeTo( ad, [C.iocontrol<<3, 0x08] );
-  this.i2c.writeTo( ad, [C.fcr<<3, 0x07] );
-  this.i2c.writeTo( ad, [C.lcr<<3, 0x83] );
-  this.i2c.writeTo( ad, [C.dll<<3, 0x60] );
-  this.i2c.writeTo( ad, [C.dlh<<3, 0x00] );
-  this.i2c.writeTo( ad, [C.lcr<<3, 0x03] );
-  this.measure();
+  this.i2c.writeTo( ad, [reg.iocontrol<<3, 0x08] );
+  this.i2c.writeTo( ad, [reg.fcr<<3, 0x07] );
+  this.i2c.writeTo( ad, [reg.lcr<<3, 0x83] );
+  this.i2c.writeTo( ad, [reg.dll<<3, 0x60] );
+  this.i2c.writeTo( ad, [reg.dlh<<3, 0x00] );
+  this.i2c.writeTo( ad, [reg.lcr<<3, 0x03] );
+  this.measure(this.parse);
 };
 
 /**
  * Measure the co2 Concentration
  * @returns {int} this.ppm - the concentration of CO2 in parts per million
  */
-mh_z16.prototype.measure = function() {
-  this.i2c.writeTo( this.address, [C.fcr<<3, 0x07] );
+mh_z16.prototype.measure = function(callback) {
+  this.i2c.writeTo( this.address, [reg.fcr<<3, 0x07] );
   this.send(this.C.readCommand);
-  this.C.readData = this.receive();
-  this.ppm = this.parse(this.C.readData);
+  var co2Data = this.receive();
+  // this.ppm = this.parse();
+  this.ppm = callback(co2Data);
   return this.ppm;
 };
 
@@ -97,7 +98,7 @@ mh_z16.prototype.measure = function() {
  * Must be done in normal air ~ 400ppm
  */
 mh_z16.prototype.calZero = function() {
-  this.i2c.writeTo( this.address, [C.fcr<<3, 0x07] );
+  this.i2c.writeTo( this.address, [reg.fcr<<3, 0x07] );
   this.send(this.C.calCommand);
 };
 
@@ -105,44 +106,49 @@ mh_z16.prototype.calZero = function() {
 
 /**
  * Send data to the MH_Z16
- * @param {Array} pdata - an array of 9 integers to send to the device
+ * @param {Array} data - an array of 9 integers to send to the device
  */
-mh_z16.prototype.send = function(pdata) {
+mh_z16.prototype.send = function(data) {
   var ad = this.address;
-  this.i2c.writeTo( ad, C.txlvl<<3 );
+  this.i2c.writeTo( ad, reg.txlvl<<3 );
   var result = this.i2c.readFrom( ad, 1 );
   if ( result>=9 ) {
-    this.i2c.writeTo( ad, [C.thr<<3, pdata] );
+    this.i2c.writeTo( ad, [reg.thr<<3, data] );
   }
 };
 
 /**
  * Recieve data from device
- * @returns {Array} pdata - an array of 9 integers
+ * @returns {Array} data - an array of 9 integers
  */
 mh_z16.prototype.receive = function() {
   var ad = this.address;
-  this.i2c.writeTo( ad, C.rhr<<3 );
-  return this.i2c.readFrom( ad, 9 );
+  this.i2c.writeTo( ad, reg.rxlvl<<3 );
+  setTimeout(function() {
+    // If device has more than 9 bytes available, read first 9 only
+    var rx = this.i2c.readFrom( ad, 1 );
+    if (rx[0]>9) {
+      rx[0] = 9;
+    }
+
+    this.i2c.writeTo( ad, reg.rhr<<3 );
+    return this.i2c.readFrom( ad, rx );
+  }, 50);
 };
 
 /**
- * parse received data and calculate ppm
+ * parse the device data and calculate ppm
+ * bytes (2 - 5) are the actual values of the co2
  * @returns {Array} ppm - an integer value of the ppm concentration
  */
-mh_z16.prototype.parse = function(pdata) {
-  var ad = this.address;
-  var checksum = 0;
-  for (var i=0; i<9; i++) {
-    checksum += pdata[i];
-  }
-  if (pdata[0] == 0xff && pdata[1] == 0x9c && checksum == 0xff) {
-    return pdata[2]<<24 | pdata[3]<<16 | pdata[4]<<8 | pdata[5];
-  } else {
-    return NaN;
-  }
-};
-
-exports.connect = function(i2c, address) {
-  return new mh_z16(i2c,address);
+mh_z16.prototype.parse = function(data) {
+  // var checksum = 0;
+  // for (var i=0; i<data.length; i++) {
+  //   checksum += data[i];
+  // }
+  // if (data[0] == 0xff && data[1] == 0x9c && checksum == 0xff) {
+    return data[2]<<24 | data[3]<<16 | data[4]<<8 | data[5];
+  // } else {
+    // return NaN;
+  // }
 };

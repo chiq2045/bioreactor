@@ -1,6 +1,5 @@
 /* Copyright (c) 2014 Charles Oroko. See the file LICENSE for copying permission. */
 /* Interract with EZO pH from Atlas Scientific: https://www.atlas-scientific.com/product_pages/circuits/ezo_ph.html */
-var exports = {};
 
 function max38155k(/*=SPI*/spi, /*=PIN*/sck, /*=PIN*/mosi, /*=PIN*/cs) {
   this.spi = spi;
@@ -8,6 +7,7 @@ function max38155k(/*=SPI*/spi, /*=PIN*/sck, /*=PIN*/mosi, /*=PIN*/cs) {
   this.cs = cs;
   this.temp = 0;
 }
+exports = max38155k;
 
 max38155k.prototype.readC = function() {
   var d = spi.send([0,0,0,0], cs);
@@ -38,8 +38,4 @@ max38155k.prototype.readK = function() {
 
 max38155k.prototype.readR = function() {
   return this.readTempK()*9/5;
-};
-
-exports.connect = function(/*=SPI*/spi, /*=PIN*/sck, /*=PIN*/mosi, /*=PIN*/cs) {
-  return new max38155k(spi, sck, mosi, cs);
 };
