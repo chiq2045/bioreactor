@@ -27,5 +27,5 @@ i2c.setup({
 });
 
 phSensor = new (require('ezoph'))( i2c, phAddress );
-co2Sensor = new (require('ndir'))( i2c, co2Address );
+co2Sensor = new (require('mh_z16'))( i2c, co2Address );
 tempSensor = new (require('max31855k'))( spi, sck, miso, cs );
