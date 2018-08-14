@@ -77,7 +77,9 @@ mh_z16.prototype.begin = function() {
   this.i2c.writeTo( ad, [reg.dll<<3, 0x60] );
   this.i2c.writeTo( ad, [reg.dlh<<3, 0x00] );
   this.i2c.writeTo( ad, [reg.lcr<<3, 0x03] );
-  this.measure(this.parse);
+  // this.measure(function(finalReadData){
+  //   // Work 
+  // });
 };
 
 /**
@@ -87,10 +89,11 @@ mh_z16.prototype.begin = function() {
 mh_z16.prototype.measure = function(callback) {
   this.i2c.writeTo( this.address, [reg.fcr<<3, 0x07] );
   this.send(this.C.readCommand);
-  var co2Data = this.receive();
-  // this.ppm = this.parse();
-  this.ppm = callback(co2Data);
-  return this.ppm;
+  
+  this.receive(function(ppm){
+    this.readData = ppm;
+    callback(this.parse(this.readData));
+  })
 };
 
 /**
@@ -118,10 +121,10 @@ mh_z16.prototype.send = function(data) {
 };
 
 /**
- * Recieve data from device
+ * Receive data from device
  * @returns {Array} data - an array of 9 integers
  */
-mh_z16.prototype.receive = function() {
+mh_z16.prototype.receive = function(callback) {
   var ad = this.address;
   this.i2c.writeTo( ad, reg.rxlvl<<3 );
   setTimeout(function() {
@@ -129,10 +132,9 @@ mh_z16.prototype.receive = function() {
     var rx = this.i2c.readFrom( ad, 1 );
     if (rx[0]>9) {
       rx[0] = 9;
-    }
-
+    }    
     this.i2c.writeTo( ad, reg.rhr<<3 );
-    return this.i2c.readFrom( ad, rx );
+    callback(this.i2c.readFrom( ad, rx ));
   }, 50);
 };
 
