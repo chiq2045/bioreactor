@@ -87,12 +87,14 @@ mh_z16.prototype.begin = function() {
  * @returns {int} this.ppm - the concentration of CO2 in parts per million
  */
 mh_z16.prototype.measure = function(callback) {
-  this.i2c.writeTo( this.address, [reg.fcr<<3, 0x07] );
-  this.send(this.C.readCommand);
+  var self = this;
+  self.i2c.writeTo( self.address, [reg.fcr<<3, 0x07] );
+  self.send(self.C.readCommand);
   
-  this.receive(function(ppm){
-    this.readData = ppm;
-    callback(this.parse(this.readData));
+  self.receive(function(ppmArray){
+    self.C.readData = ppmArray;
+    self.ppm = self.parse(self.C.readData);
+    callback(self.ppm);
   })
 };
 

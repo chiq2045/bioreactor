@@ -26,6 +26,6 @@ i2c.setup({
   sda:sda
 });
 
-phSensor = new (require('ezoph'))( i2c, phAddress );
-co2Sensor = new (require('mh_z16'))( i2c, co2Address );
-tempSensor = new (require('max31855k'))( spi, sck, miso, cs );
+P = new (require('ezoph'))( i2c, phAddress );
+C = new (require('mh_z16'))( i2c, co2Address );
+T = new (require('max31855k'))( spi, sck, miso, cs );
