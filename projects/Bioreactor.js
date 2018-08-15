@@ -37,7 +37,7 @@ var readCO2 = setInterval(function(){C.measure( () => {});}, 2000 );
 // measure the temperature
 var readTemp = setInterval(() => {T.readC();}, 2000);
 // measure pH
-
+var readPH = setInterval(() => {P.read(() => {});}, 2000);
 //actuators
 var actuators = {
   temp : NodeMCU.D4,
@@ -68,7 +68,7 @@ var updateActuators = setInterval(() => {
   if (!actuators.tempStatus
       && bioData.temp < 35
       && getTime()-actuators.tempOff >=14) {
-    digitalWrite(actuators.temp,true);
+    digitalWrite(NodeMCU.D4, true);
     actuators.tempStatus = true;
     actuators.tempOn = getTime();
     console.log('on');
@@ -76,7 +76,7 @@ var updateActuators = setInterval(() => {
   if (!actuators.tempStatus
       && bioData.temp >= 36
       && getTime()-actuators.tempOn>=7) {
-    digitalWrite(actuators.temp,false);
+    digitalWrite(NodeMCU.D4, false);
     actuators.tempStatus = false;
     actuators.tempOff = getTime();
     console.log('off');
