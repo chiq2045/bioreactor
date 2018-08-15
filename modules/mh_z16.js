@@ -85,7 +85,7 @@ mh_z16.prototype.begin = function() {
 
 /**
  * Measure the co2 Concentration
- * @returns {int} this.ppm - the concentration of CO2 in parts per million
+ * @callback resultCallback - the concentration of CO2 in parts per million gets passed into the callback
  */
 mh_z16.prototype.measure = function(callback) {
   var self = this;
