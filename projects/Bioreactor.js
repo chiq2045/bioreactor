@@ -68,11 +68,17 @@ var updateActuators = setInterval(() => {
   if (!actuators.tempStatus
       && bioData.temp < 35
       && getTime()-actuators.tempOff >=14) {
-    actuators.temp.write(true);
+    digitalWrite(actuators.temp,true);
     actuators.tempStatus = true;
     actuators.tempOn = getTime();
+    console.log('on');
   }
   if (!actuators.tempStatus
       && bioData.temp >= 36
-      && getTime()-actuator.tempOn>=7) {
-    actuator.temp.write(true);
+      && getTime()-actuators.tempOn>=7) {
+    digitalWrite(actuators.temp,false);
+    actuators.tempStatus = false;
+    actuators.tempOff = getTime();
+    console.log('off');
+  }
+}, 1000);
