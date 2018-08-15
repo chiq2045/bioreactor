@@ -93,8 +93,15 @@ mh_z16.prototype.measure = function(callback) {
   
   self.receive(function(ppmArray){
     self.C.readData = ppmArray;
-    self.ppm = self.parse(self.C.readData);
-    callback(self.ppm);
+    
+    if (this.C.readData === null || this.C.readData == undefined){
+        console.log("Co2 censor returned nothing");
+        callback(0);
+    } else {
+        self.ppm = self.parse(self.C.readData);
+        callback(self.ppm);
+    }
+
   })
 };
 
