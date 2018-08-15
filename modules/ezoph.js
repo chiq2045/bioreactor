@@ -20,7 +20,8 @@ var C = {
 function ezoph(i2c, address) {
   this.i2c = i2c;
   this.address = address;
-  this.value = 0;
+  this.ph = 0;
+  this.timeout = 900;
 }
 exports = ezoph;
 
@@ -28,6 +29,7 @@ exports = ezoph;
  * Public Constants (mainly used for debugging)
  */
 ezoph.prototype.C = {
+
 };
 
 /** ------------------ Common functions --------------------- */
@@ -36,10 +38,9 @@ ezoph.prototype.C = {
  * Reads ph
  * @returns {String} data - value returned from device
  */
-ezoph.prototype.read = function(callback, timeout) {
-  if (timeout === undefined) { timeout = C.readTime; }
+ezoph.prototype.read = function(callback) {
   this.sendCommand(C.read);
-  this.getData(callback, timeout);
+  this.getData(callback, this.timeout);
 };
 
 /**
@@ -92,7 +93,7 @@ ezoph.prototype.sendCommand = function(comm) {
   this.C.command = comm;
 /*  this.C.getData();
 
-  return this.value;*/
+  return this.ph;*/
 };
 
 /**
@@ -102,13 +103,13 @@ ezoph.prototype.sendCommand = function(comm) {
  */
 ezoph.prototype.getData = function(callback, timeout) {
   //receive data from device after 900ms
+  if (timeout === undefined) { timeout = C.readTime; }
   var addr = this.address;
   var data = this.C.data;
   if ( this.C.command.toLowerCase() != "sleep" ) {
     setTimeout(function() {
 
       data = this.i2c.readFrom(addr, 21);
-      console.log('here');
 
       console.log(this.address);
 
