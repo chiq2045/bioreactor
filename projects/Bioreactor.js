@@ -62,21 +62,21 @@ var updateData = setInterval(() => {
 }, 4000);
 
 var updateActuators = setInterval(() => {
-  actuators.temp = actuators.tempStatus;
-  actuators.co2 = actuators.co2Status;
+  actuators.temp = !actuators.tempStatus;
+  actuators.co2 = !actuators.co2Status;
 
   if (!actuators.tempStatus
       && bioData.temp < 35
       && getTime()-actuators.tempOff >=14) {
-    digitalWrite(NodeMCU.D4, true);
+    digitalWrite(NodeMCU.D0, true);
     actuators.tempStatus = true;
     actuators.tempOn = getTime();
     console.log('on');
   }
-  if (!actuators.tempStatus
-      && bioData.temp >= 36
+  if (actuators.tempStatus
+      && bioData.temp >= 35
       && getTime()-actuators.tempOn>=7) {
-    digitalWrite(NodeMCU.D4, false);
+    digitalWrite(NodeMCU.D0, false);
     actuators.tempStatus = false;
     actuators.tempOff = getTime();
     console.log('off');
