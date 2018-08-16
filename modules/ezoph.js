@@ -103,15 +103,13 @@ ezoph.prototype.sendCommand = function(comm) {
  */
 ezoph.prototype.getData = function(callback, timeout) {
   //receive data from device after 900ms
+  var self = this;
   if (timeout === undefined) { timeout = C.readTime; }
-  var addr = this.address;
-  var data = this.C.data;
-  if ( this.C.command.toLowerCase() != "sleep" ) {
+  var addr = self.address;
+  if ( self.C.command.toLowerCase() != "sleep" ) {
     setTimeout(function() {
 
-      data = this.i2c.readFrom(addr, 21);
-
-      console.log(this.address);
+      var data = self.i2c.readFrom(addr, 21);
 
       //changes received data to a string
       var strArray = [];
@@ -122,9 +120,10 @@ ezoph.prototype.getData = function(callback, timeout) {
           }
         }
       }
-
+      self.C.data = data; 
+      self.ph = strArray.join("");
       //concatenates the string so that it actually looks like a srting rather than an array
-      callback(strArray.join(""));
+      callback(self.ph);
     },timeout);
   } else {
      callback(null); 
