@@ -9,39 +9,39 @@ var reg = {
 
   //General Register Set for SC16IS750PW I2C/UART bridge
   //Only accessible if lcr[7] = 0
-  rhr       : 0x00<<3, //Receive Holding Register       (R)
-  thr       : 0x00<<3, //Transmit Holding Register      (W)
-  ier       : 0x01<<3, //Interrupt Enable Register      (R/W)
-  iir       : 0x02<<3, //Interrupt indication Register  (R)
-  fcr       : 0x02<<3, //FIFO Control Register          (R)
-  lcr       : 0x03<<3, //Line Control Register          (R)
-  mcr       : 0x04<<3, //Modem Control Register         (R)
-  lsr       : 0x05<<3, //Line Status Register           (R)
-  tcr       : 0x06<<3, //Transmission Control Register  (R/W)
-  tlr       : 0x07<<3, //Trigger Level Register         (R/W)
-  msr       : 0x06<<3, //Modem Static Register          (R)
-  spr       : 0x07<<3, //Scratchpad Register            (R/W)
-  txlvl     : 0x08<<3, //Transmit FIFO Level Register   (R)
-  rxlvl     : 0x09<<3, //Receive FIFO Level Register    (R)
-  iodir     : 0x0a<<3, //I/O pin Direction Register     (R/W)
-  iostate   : 0x0b<<3, //I/O pin States Register        (R)
-  iointena  : 0x0c<<3, //I/O Interrupt Enable Register  (R/W)
+  rhr: 0x00 << 3, //Receive Holding Register       (R)
+  thr: 0x00 << 3, //Transmit Holding Register      (W)
+  ier: 0x01 << 3, //Interrupt Enable Register      (R/W)
+  iir: 0x02 << 3, //Interrupt indication Register  (R)
+  fcr: 0x02 << 3, //FIFO Control Register          (R)
+  lcr: 0x03 << 3, //Line Control Register          (R)
+  mcr: 0x04 << 3, //Modem Control Register         (R)
+  lsr: 0x05 << 3, //Line Status Register           (R)
+  tcr: 0x06 << 3, //Transmission Control Register  (R/W)
+  tlr: 0x07 << 3, //Trigger Level Register         (R/W)
+  msr: 0x06 << 3, //Modem Static Register          (R)
+  spr: 0x07 << 3, //Scratchpad Register            (R/W)
+  txlvl: 0x08 << 3, //Transmit FIFO Level Register   (R)
+  rxlvl: 0x09 << 3, //Receive FIFO Level Register    (R)
+  iodir: 0x0a << 3, //I/O pin Direction Register     (R/W)
+  iostate: 0x0b << 3, //I/O pin States Register        (R)
+  iointena: 0x0c << 3, //I/O Interrupt Enable Register  (R/W)
   //0x0d is reserved
-  iocontrol : 0x0e<<3, //I/O pins Control Regiser       (R/W)
-  efcr      : 0x0f<<3, //Extra Features Register        (R/W)
+  iocontrol: 0x0e << 3, //I/O pins Control Regiser       (R/W)
+  efcr: 0x0f << 3, //Extra Features Register        (R/W)
 
   //Special Register Set for SC16IS750PW I2C/UART bridge
   //Only accessible when lcr[7]=1 and lcr/=0xbf
-  dll       : 0x00<<3, //divisor latch lsb              (R/W)
-  dlh       : 0x01<<3, //divisor latch msb              (R/W)
+  dll: 0x00 << 3, //divisor latch lsb              (R/W)
+  dlh: 0x01 << 3, //divisor latch msb              (R/W)
 
   //Enhanced Register Set for SC16IS750PW I2C/UART bridge
   //Only accessible when lcr=0xbf
-  efr       : 0x02<<3, //Enhanced feature Register      (R/W)
-  xon1      : 0x04<<3, //Xon1 word                      (R/W)
-  xon2      : 0x05<<3, //Xon2 word                      (R/W)
-  xoff1     : 0x06<<3, //Xoff1 word                     (R/W)
-  xoff2     : 0x07<<3, //Xoff2 word                     (R/W)
+  efr: 0x02 << 3, //Enhanced feature Register      (R/W)
+  xon1: 0x04 << 3, //Xon1 word                      (R/W)
+  xon2: 0x05 << 3, //Xon2 word                      (R/W)
+  xoff1: 0x06 << 3, //Xoff1 word                     (R/W)
+  xoff2: 0x07 << 3 //Xoff2 word                     (R/W)
 };
 
 /**
@@ -50,7 +50,7 @@ var reg = {
  * @param {int} address - the address of device (default is 0x9a)
  * @return {int} - the co2 concentration measured by the device
  */
-function mh_z16( i2c, address ) {
+function mh_z16(i2c, address) {
   this.i2c = i2c;
   this.address = address;
   this.ppm = 0;
@@ -61,9 +61,9 @@ exports = mh_z16;
  * Public Constants
  */
 mh_z16.prototype.C = {
-  readData : [ 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 ],
-  readCommand : [ 0xff,0x01,0x86,0x00,0x00,0x00,0x00,0x00,0x79 ],
-  calCommand : [ 0xff,0x01,0x87,0x00,0x00,0x00,0x00,0x00,0x78 ]
+  readData: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+  readCommand: [0xff, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79],
+  calCommand: [0xff, 0x01, 0x87, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78]
 };
 
 /**
@@ -72,14 +72,14 @@ mh_z16.prototype.C = {
 mh_z16.prototype.begin = function() {
   var ad = this.address;
   var i2c = this.i2c;
-  i2c.writeTo( ad, [reg.iocontrol, 0x08] );
-  i2c.writeTo( ad, [reg.fcr, 0x07] );
-  i2c.writeTo( ad, [reg.lcr, 0x83] );
-  i2c.writeTo( ad, [reg.dll, 0x60] );
-  i2c.writeTo( ad, [reg.dlh, 0x00] );
-  i2c.writeTo( ad, [reg.lcr, 0x03] );
+  i2c.writeTo(ad, [reg.iocontrol, 0x08]);
+  i2c.writeTo(ad, [reg.fcr, 0x07]);
+  i2c.writeTo(ad, [reg.lcr, 0x83]);
+  i2c.writeTo(ad, [reg.dll, 0x60]);
+  i2c.writeTo(ad, [reg.dlh, 0x00]);
+  i2c.writeTo(ad, [reg.lcr, 0x03]);
   // this.measure(function(finalReadData){
-  //   // Work 
+  //   // Work
   // });
 };
 
@@ -90,19 +90,18 @@ mh_z16.prototype.begin = function() {
 mh_z16.prototype.measure = function(callback) {
   var self = this;
   self.send(self.C.readCommand);
-  
-  self.receive(function(ppmArray){
-    self.C.readData = ppmArray;
-    
-    if (ppmArray === null || ppmArray == undefined){
-        console.log("Co2 censor returned nothing");
-        callback(0);
-    } else {
-        self.ppm = self.parse(ppmArray);
-        callback(self.ppm);
-    }
 
-  })
+  self.receive(function(ppmArray) {
+    self.C.readData = ppmArray;
+
+    if (ppmArray === null || ppmArray == undefined) {
+      console.log("Co2 censor returned nothing");
+      callback(0);
+    } else {
+      self.ppm = self.parse(ppmArray);
+      callback(self.ppm);
+    }
+  });
 };
 
 /**
@@ -121,11 +120,11 @@ mh_z16.prototype.calZero = function() {
  */
 mh_z16.prototype.send = function(data) {
   var ad = this.address;
-  this.i2c.writeTo( this.address, [reg.fcr, 0x07] );
-  this.i2c.writeTo( ad, reg.txlvl );
+  this.i2c.writeTo(ad, [reg.fcr, 0x07]);
+  this.i2c.writeTo(ad, reg.txlvl);
   // var result = this.i2c.readFrom( ad, 1 );
   // if ( result>=9 ) {
-    this.i2c.writeTo( ad, [reg.thr, data] );
+  this.i2c.writeTo(ad, [reg.thr, data]);
   //   console.log('sent');
   // }
 };
@@ -136,15 +135,15 @@ mh_z16.prototype.send = function(data) {
  */
 mh_z16.prototype.receive = function(callback) {
   var ad = this.address;
-  this.i2c.writeTo( ad, reg.rxlvl );
+  this.i2c.writeTo(ad, reg.rxlvl);
   setTimeout(function() {
     // If device has more than 9 bytes available, read first 9 only
-    var rx = this.i2c.readFrom( ad, 1 );
-    if (rx[0]>9) {
+    var rx = this.i2c.readFrom(ad, 1);
+    if (rx[0] > 9) {
       rx[0] = 9;
     }
-    this.i2c.writeTo( ad, reg.rhr );
-    callback(this.i2c.readFrom( ad, rx ));
+    this.i2c.writeTo(ad, reg.rhr);
+    callback(this.i2c.readFrom(ad, rx));
   }, 50);
 };
 
@@ -159,10 +158,10 @@ mh_z16.prototype.parse = function(data) {
   //   checksum += data[i];
   // }
   // if (data[0] == 0xff && data[1] == 0x9c /*&& checksum == 0xff*/) {
-    // return data[2]<<24 | data[3]<<16 | data[4]<<8 | data[5];
-    //test new parsing calculation
-    return data[2]<<8 | data[3];
+  // return data[2]<<24 | data[3]<<16 | data[4]<<8 | data[5];
+  //test new parsing calculation
+  return (data[2] << 8) | data[3];
   // } else {
-    // return NaN;
+  // return NaN;
   // }
 };

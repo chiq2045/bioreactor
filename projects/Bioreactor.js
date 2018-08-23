@@ -57,9 +57,12 @@ var bioData = {
 };
 
 var updateData = setInterval(() => {
+  bioData.ph = P.ph;
   bioData.co2 = C.ppm;
   bioData.temp = T.temp;
 }, 4000);
+
+var showData = setInterval(() => {console.log(bioData);}, 3000);
 
 var updateActuators = setInterval(() => {
   actuators.temp = !actuators.tempStatus;

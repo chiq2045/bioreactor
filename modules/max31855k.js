@@ -14,7 +14,7 @@ exports = max38155k;
 max38155k.prototype.begin = function() {
   this.spi.setup({miso:this.miso, sck:this.sck});
 }
-ma
+
 max38155k.prototype.readC = function() {
   this.data = this.spi.send([0,0,0,0], cs);
   this.temp = this.data[0]<<24 | this.data[1]<<16 | this.data[2]<<8 | this.data[3];

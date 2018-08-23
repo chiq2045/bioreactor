@@ -70,6 +70,17 @@ ezoph.prototype.calHigh = function() {
   return this.getData();
 };
 
+/**
+ * Sends specific command to ezo ph circuit
+ * @param {function} callback
+ * @param {string} comm - command to send to circuit, ie. 'sleep', or 'i'
+ * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
+ */
+ezoph.prototype.command = function(callback, comm) {
+  this.sendCommand(comm);
+  this.getData(callback, this.timeout);
+};
+
 /** ------------------ Helper functions --------------------- */
 
 /**
