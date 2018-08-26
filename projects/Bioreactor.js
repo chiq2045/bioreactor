@@ -12,24 +12,24 @@ var phAddress = 0x63;   // EZO pH i2c address
 var co2Address = 0x4d;  // mh-z16 I2C/UART bridge address
 
 // I2C pins
-var sda = NodeMCU.D3;
-var scl = NodeMCU.D2;
-
+var sda = D23;
+var scl = D22;
+/*
 // SPI pins
 var miso = NodeMCU.D5;
 var cs = NodeMCU.D6; 
 var sck = NodeMCU.D7;
-
+*/
 // setup I2C bus
 i2c.setup({
   scl:scl,
   sda:sda
 });
 
-P = new (require('ezoph'))( i2c, phAddress );
+//P = new (require('ezoph'))( i2c, phAddress );
 C = new (require('mh_z16'))( i2c, co2Address );
-T = new (require('max31855k'))( spi, sck, miso, cs );
-
+//T = new (require('max31855k'))( spi, sck, miso, cs );
+/*
 C.begin(); // initialize the co2 Sensor
 T.begin(); //initialise temperature sensor
 // measure the CO2 concentration every 10 seconds
@@ -85,3 +85,4 @@ var updateActuators = setInterval(() => {
     console.log('off');
   }
 }, 1000);
+*/
