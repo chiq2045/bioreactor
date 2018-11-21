@@ -13,9 +13,13 @@ var C = {
 
 /**
  * Communicate with the EZO pH device and sensor
- * @param {object} i2c - an i2c object
- * @param {int} address - address of the device
- * @returns {string} value - the output of the device
+ * @module ezoph
+ * 
+ * @property {object} i2c - an i2c object
+ * @property {int} address - address of the device
+ * @property {String} ph - the last pH value read
+ * @property {int} timeout - the time taken to carry out operation, in ms. defaults to 900, the longest time needed for any operation.
+ * @returns {String} value - the output of the device. this can be anything from the pH to the current status of the device.
  */
 function ezoph(i2c, address) {
   this.i2c = i2c;
@@ -36,6 +40,7 @@ ezoph.prototype.C = {
 
 /**
  * Reads ph
+ * @method  ezoph/read
  * @returns {String} data - value returned from device
  */
 ezoph.prototype.read = function(callback) {
@@ -45,7 +50,8 @@ ezoph.prototype.read = function(callback) {
 
 /**
  * Single point calibration at midpoint
- * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
+ * @method ezoph/calMid
+ * @returns {String} data - 1 if successful 2,254,255 if unsuccessful
  */
 ezoph.prototype.calMid = function() {
   this.sendCommand(C.calMid);
@@ -54,6 +60,7 @@ ezoph.prototype.calMid = function() {
 
 /**
  * Two point calibration at low point
+ * @method ezoph/calLow
  * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
  */
 ezoph.prototype.calLow = function() {
@@ -63,6 +70,7 @@ ezoph.prototype.calLow = function() {
 
 /**
  * Three point calibration at high point
+ * @method ezoph/calHigh
  * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
  */
 ezoph.prototype.calHigh = function() {
@@ -72,6 +80,7 @@ ezoph.prototype.calHigh = function() {
 
 /**
  * Sends specific command to ezo ph circuit
+ * @method ezoph/command
  * @param {function} callback
  * @param {string} comm - command to send to circuit, ie. 'sleep', or 'i'
  * @returns {String} data - 1 if successful, 2,254,255 if unsuccessful
@@ -93,6 +102,7 @@ ezoph.prototype.clear = function() {
 
 /**
  * Read a command as a string
+ * @method ezoph/sendCommand
  * @param {String} comm - the command that the device will carry out
  */
 ezoph.prototype.sendCommand = function(comm) {
@@ -109,7 +119,8 @@ ezoph.prototype.sendCommand = function(comm) {
 
 /**
  * Retreive data from device
- * @callback callback - value of the data reived from device
+ * @method ezoph/getData
+ * @param {function} callback - value of the data reived from device
  * @param {int} timeout - the amount of time needed for the device to complete function. minimum is 900
  */
 ezoph.prototype.getData = function(callback, timeout) {
@@ -143,7 +154,12 @@ ezoph.prototype.getData = function(callback, timeout) {
 
 /** ---------------------- Exports ------------------------- */
 
-/** This is 'exported' so it can be used with `require('ezoph.js').connect(pin1,pin2)` */
+/** 
+ * This is 'exported' so it can be used with `require('ezoph.js').connect(pin1,pin2)`
+ * @example <caption>How to use ezoph module</caption>
+ * //create a new instance of ph sensor
+ * phSensor = new ( require('ezoph') )( i2c, phAddress );
+ */
 exports.connect = function(i2c, address) {
   return new ezoph(i2c,address);
 };
