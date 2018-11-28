@@ -5,6 +5,7 @@ var reg = {
   /**
    * Register set for SC16IS750PW I2C/UART bridge
    * check part 8 on the datasheet for more information
+   * @private
    */
 
   //General Register Set for SC16IS750PW I2C/UART bridge
@@ -46,9 +47,12 @@ var reg = {
 
 /**
  * Make a new instance of the MH_Z16 sensor with SC16IS750PW I2C/UART bridge
+ * @module mh_z16
+ * 
  * @param {Object} i2c - an instance of an I2C object
- * @param {int} address - the address of device (default is 0x9a)
- * @return {int} - the co2 concentration measured by the device
+ * @param {number} address - the address of device (default is 0x9a)
+ * @property {number} ppm - the last measured co2 concentration (can be used for debug)
+ * @returns {number} - the co2 concentration measured by the device
  */
 function mh_z16(i2c, address) {
   this.i2c = i2c;
@@ -58,7 +62,7 @@ function mh_z16(i2c, address) {
 exports = mh_z16;
 
 /**
- * Public Constants
+ * Public Constants (mainly used for debugging)
  */
 mh_z16.prototype.C = {
   readData: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
@@ -67,7 +71,8 @@ mh_z16.prototype.C = {
 };
 
 /**
- * Initiallise the sensor for I2C communication
+ * Initializes the mh_z16 sensor
+ * @function mh_z16/begin
  */
 mh_z16.prototype.begin = function() {
   var ad = this.address;
@@ -78,14 +83,17 @@ mh_z16.prototype.begin = function() {
   i2c.writeTo(ad, [reg.dll, 0x60]);
   i2c.writeTo(ad, [reg.dlh, 0x00]);
   i2c.writeTo(ad, [reg.lcr, 0x03]);
-  // this.measure(function(finalReadData){
-  //   // Work
-  // });
 };
 
 /**
  * Measure the co2 Concentration
+ * @method mh_z16/measure
  * @callback resultCallback - the concentration of CO2 in parts per million gets passed into the callback
+ * @returns {number} - the value of the concentration, or 0, when there is a problem
+ * @example <caption>How to use mh_z16.measure</caption>
+ * // if the concentration is to be stored in a variable ppm then:
+ * mh_z16.measure( ()=>{} );
+ * ppm = mh_z16.ppm
  */
 mh_z16.prototype.measure = function(callback) {
   var self = this;
@@ -107,6 +115,7 @@ mh_z16.prototype.measure = function(callback) {
 /**
  * Calibrate the zero level for ppm
  * Must be done in normal air ~ 400ppm
+ * @method mh_z16/calZero
  */
 mh_z16.prototype.calZero = function() {
   this.send(this.C.calCommand);
@@ -116,6 +125,7 @@ mh_z16.prototype.calZero = function() {
 
 /**
  * Send data to the MH_Z16
+ * @function mh_z16/send
  * @param {Array} data - an array of 9 integers to send to the device
  */
 mh_z16.prototype.send = function(data) {
@@ -131,7 +141,8 @@ mh_z16.prototype.send = function(data) {
 
 /**
  * Receive data from device
- * @returns {Array} data - an array of 9 integers
+ * @function mh_z16/recieve
+ * @callback resultCallback - an array of 9 integers 
  */
 mh_z16.prototype.receive = function(callback) {
   var ad = this.address;
@@ -150,6 +161,8 @@ mh_z16.prototype.receive = function(callback) {
 /**
  * parse the device data and calculate ppm
  * bytes (2 - 5) are the actual values of the co2
+ * @function mh_z16/parse
+ * @param {Array} data - a 9 element array
  * @returns {Array} ppm - an integer value of the ppm concentration
  */
 mh_z16.prototype.parse = function(data) {
@@ -164,4 +177,24 @@ mh_z16.prototype.parse = function(data) {
   // } else {
   // return NaN;
   // }
+};
+
+/** ---------------------- Exports ------------------------- */
+
+/** 
+ * This is 'exported' so it can be used with `require('mh_z16.js').connect(pin1,pin2)`
+ * @example <caption>How to use mh_z16 module</caption>
+ * //create a new instance of ph sensor
+ * var i2c = new I2C();     // create new i2c object
+ * var co2Address = 0x47;    // EZO pH i2c address
+ * var sda = D23;           // setup i2c pins
+ * var scl = D22;
+ * i2c.setup({              // setup I2C bus
+ *   scl:scl,
+ *   sda:sda
+ * });
+ * phSensor = new ( require('mh_z16') )( i2c, co2Address );
+ */
+exports.connect = function(i2c, address) {
+  return new ezoph(i2c,address);
 };

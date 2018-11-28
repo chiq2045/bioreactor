@@ -6,7 +6,10 @@
  * @typedef {(number|string)} numberLike
  */
 
-//Private constants
+/**
+ * preset constants to make the code more readable
+ * @private
+ */
 var C = {
   read      : 'R',
   calLow    : 'Cal,low,4.00',
