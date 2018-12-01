@@ -1,4 +1,4 @@
-var wifi;
+var wifi = require("Wifi");
 /*
 wifi.scan(function(arrayOfAcessPoints) {
   if ( arrayOfAcessPoints !== null) {
@@ -11,12 +11,12 @@ wifi.scan(function(arrayOfAcessPoints) {
   }
 });
 */
-var ssid = "WWU-Aruba-HWauth";
+var ssid = "WWU-HWauth";
 var options = {/*password:"my-pwd",*/ authMode:0};
 
 function onInit() {
   wifi = require("Wifi");
-  wifi.connect(ssid, options, function(err) {
+  wifi.connect(WWU-HWauth, {/*password:"my-pwd",*/ authMode:0}, function(err) {
     if (err) {
       console.log("Connection error: "+err);
       return;
