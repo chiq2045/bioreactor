@@ -22,7 +22,9 @@ var C = {
 /**
  * Communicate with the EZO pH device and sensor
  * @module ezoph
- * 
+ * @param {Object} i2c - an i2c object
+ * @param {number} address - address of the device
+ * @param {numberLike} ph - the last pH value read
  * @property {Object} i2c - an i2c object
  * @property {number} address - address of the device
  * @property {numberLike} ph - the last pH value read
