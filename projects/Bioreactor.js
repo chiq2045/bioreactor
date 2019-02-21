@@ -96,9 +96,6 @@ let updateActuators = setInterval(() => {
 analogWrite(D13, .15)
 
 /* Useful information for later
-  100 ms is the amount of time to deliver one drop of NaOH 
-  out of 5 drops a 6th drop will happen
-  80 ms will cause only 4 out of 5 drops to happen
 let addNaOH = function() {
  D12.write(false)
  setTimeout(()=> {
