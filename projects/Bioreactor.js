@@ -2,23 +2,23 @@
  * Bioreactor code setup
  */
 /***** Imports *****/
-var wifi = require('Wifi');
-var http = require('http');
+const wifi = require('Wifi');
+const http = require('http');
 
 /***** Setup Communication Protocols *****/
-var i2c = new I2C();
-var spi = new SPI();
-var phAddress = 0x63;   // EZO pH i2c address
-var co2Address = 0x4d;  // mh-z16 I2C/UART bridge address
+let i2c = new I2C();
+let spi = new SPI();
+let phAddress = 0x63;   // EZO pH i2c address
+let co2Address = 0x4d;  // mh-z16 I2C/UART bridge address
 
 // I2C pins
-var sda = D23;
-var scl = D22;
+let sda = D23;
+let scl = D22;
 
 // SPI pins
-var miso = D25;
-var cs = D33;
-var sck = D32;
+let miso = D25;
+let cs = D33;
+let sck = D32;
 
 // setup I2C bus
 i2c.setup({
@@ -26,11 +26,11 @@ i2c.setup({
   sda:sda
 });
 
-P = new (require('ezoph'))( i2c, phAddress );
-C = new (require('mh_z16'))( i2c, co2Address );
-T = new (require('max31855k'))( spi, sck, miso, cs );
+let phSensor = new (require('ezoph'))( i2c, phAddress );
+let co2Sensor = new (require('mh_z16'))( i2c, co2Address );
+let tempSensor = new (require('max31855k'))( spi, sck, miso, cs );
 
-var co2Timer = setInterval(() => {
+let co2Timer = setInterval(() => {
     digitalWrite(actuators.co2, true);
     console.log("Co2 on");
     setTimeout(() => {
@@ -39,63 +39,40 @@ var co2Timer = setInterval(() => {
     }, 5000);
 }, (1000 * 60 * 5));
 
-/*
-const CMDS = {
-  readData: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-  readCommand: [0xff, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79],
-  calCommand: [0xff, 0x01, 0x87, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78]
-};
 
-Serial2.setup(9600, {tx: D4, rx: D15});
 
-function sendcommand(arr) {
-	Serial2.write(arr);
-}
-
-function measure() {
-	sendcommand(CMDS.readCommand);
-	
-    console.log(Serial2.available());
-	while(Serial2.available()) {
-		console.log("reading data: ");
-		var result = Serial2.read();
-		console.log(result);
-	}
-}
-
-/*
-C.begin(); // initialize the co2 Sensor
-T.begin(); //initialise temperature sensor
+co2Sensor.begin(); // initialize the co2 Sensor
+tempSensor.begin(); //initialise temperature sensor
 // measure the CO2 concentration every 10 seconds
-var readCO2 = setInterval(function(){C.measure( () => {});}, 2000 );
+let readCO2 = setInterval(() => {co2Sensor.measure( () => {});}, 2000 );
 // measure the temperature
-var readTemp = setInterval(() => {T.readC();}, 2000);
+let readTemp = setInterval(() => {tempSensor.readC();}, 2000);
 // measure pH
-var readPH = setInterval(() => {P.read(() => {});}, 2000);
+let readPH = setInterval(() => {phSensor.read(() => {});}, 2000);
 //actuators
-var actuators = {
-  temp : D19,
-  co2:D18,
+let actuators = {
+  temp: D19,
+  co2 : D18,
   tempTime:getTime(),
   co2Time: getTime(),
   tempStatus : false,
   co2Status : false
 };
 
-var bioData = {
+let bioData = {
   ph   : 0,
   co2  : 0,
   temp : 0
 };
 
-var updateData = setInterval(() => {
-  bioData.co2 = C.ppm;
-  bioData.temp = T.temp;
-  bioData.ph = P.ph;
+let updateData = setInterval(() => {
+  bioData.co2 = co2Sensor.ppm;
+  bioData.temp = tempSensor.temp;
+  bioData.ph = phSensor.ph;
 }, 4000);
 
-/*
-var updateActuators = setInterval(() => {
+
+let updateActuators = setInterval(() => {
   //actuators.temp = actuators.tempStatus;
   //actuators.co2 = actuators.co2Status;
 
@@ -110,7 +87,7 @@ var updateActuators = setInterval(() => {
   if (actuators.tempStatus
       && (bioData.temp >= 37
       || getTime()-actuators.tempTime > 5)) {
-    digitalWrite(D19, false);
+    digitalWrite(actuators.temp, false);
     actuators.tempStatus = false;
     actuators.tempTime = getTime();
     console.log('off');
@@ -118,11 +95,14 @@ var updateActuators = setInterval(() => {
 }, 1000);
 analogWrite(D13, .15)
 
-var addNaOH = function() {
+/* Useful information for later
+  100 ms is the amount of time to deliver one drop of NaOH 
+  out of 5 drops a 6th drop will happen
+  80 ms will cause only 4 out of 5 drops to happen
+let addNaOH = function() {
  D12.write(false)
  setTimeout(()=> {
   D12.write(true)
  }, 100)
 }
-
-*/
+*/ 
