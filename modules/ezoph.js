@@ -29,7 +29,7 @@ var C = {
  * @property {number} timeout - the time taken to carry out operation, in ms. defaults to 900, the longest time needed for any operation.
  * @returns {numberLike} value - the output of the device. this can be anything from the pH to the current status of the device.
  */
-function ezoph(i2c, address) {
+function ezoph(i2c, address = 99) {
   this.i2c = i2c;
   this.address = address;
   this.ph = 0;
@@ -120,7 +120,7 @@ ezoph.prototype.sendCommand = function(comm) {
   //send command to device
   this.i2c.writeTo(this.address, comm);
 
-  this.C.command = comm;
+  this.C.command = comm;  // debug stuff
 /*  this.C.getData();
 
   return this.ph;*/
