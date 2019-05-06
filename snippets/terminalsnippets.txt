@@ -1,1 +1,0 @@
-{"Reset":"reset();","Memory":"process.memory();","ClearInterval":"clearInterval();","Cmeasure":"C.measure( (ppm) => {  console.log(ppm) })"}
