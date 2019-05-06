@@ -39,10 +39,11 @@ Thumbs.db
 
 # folders            #
 ######################
-swagger/
-zetta/
-heroku/
-modules/\.js
-modules/ezoph.js
 tags
 .vscode/
+node_modules/
+
+# other              #
+######################
+package*
+.eslint*
