@@ -1,4 +1,4 @@
-/* Copyright (c) 2014 Charles Oroko. See the file LICENSE for copying permission. */
+/* Copyright (c) 2019 Charles Oroko. See the file LICENSE for copying permission. */
 /* Interract with EZO pH from Atlas Scientific: https://www.atlas-scientific.com/product_pages/circuits/ezo_ph.html */
 
 /**
@@ -10,13 +10,13 @@
  * preset constants to make the code more readable
  * @private
  */
-var C = {
-  read      : 'R',
-  calLow    : 'Cal,low,4.00',
-  calMid    : 'Cal,mid,7.00',
-  calHigh   : 'Cal,high,10.00',
-  readTime  : 900, //It takes 900ms to do a read
-  otherTime : 300, //It takes 300ms to do most other things
+const C = {
+  read: 'R',
+  calLow: 'Cal,low,4.00',
+  calMid: 'Cal,mid,7.00',
+  calHigh: 'Cal,high,10.00',
+  readTime: 900, //It takes 900ms to do a read
+  otherTime: 300, //It takes 300ms to do most other things
 };
 
 /**
@@ -34,17 +34,13 @@ var C = {
 function ezoph(i2c, address = 99) {
   this.i2c = i2c;
   this.address = address;
-  this.ph = 0;
-  this.timeout = 900;
 }
 exports = ezoph;
 
 /**
  * Public Constants (mainly used for debugging)
  */
-ezoph.prototype.C = {
-
-};
+ezoph.prototype.C = {};
 
 /** ------------------ Common functions --------------------- */
 
@@ -101,31 +97,13 @@ ezoph.prototype.command = function(callback, comm) {
 };
 
 /** ------------------ Helper functions --------------------- */
-
-/**
- * Clears the command and data arrays (used before sending a new command)
- * @function ezoph/clear
- */
-ezoph.prototype.clear = function() {
-  this.C.command = [];
-  this.C.data = [];
-};
-
 /**
  * Read a command as a string
  * @method ezoph/sendCommand
  * @param {numberLike} comm - the command that the device will carry out
  */
 ezoph.prototype.sendCommand = function(comm) {
-  //initialize arrays for debugging
-  this.clear();
-  //send command to device
   this.i2c.writeTo(this.address, comm);
-
-  this.C.command = comm;  // debug stuff
-/*  this.C.getData();
-
-  return this.ph;*/
 };
 
 /**
@@ -136,36 +114,39 @@ ezoph.prototype.sendCommand = function(comm) {
  */
 ezoph.prototype.getData = function(callback, timeout) {
   //receive data from device after 900ms
-  var self = this;
-  if (timeout === undefined) { timeout = C.readTime; }
-  var addr = self.address;
-  if ( self.C.command.toLowerCase() != "sleep" ) {
-    setTimeout(function() {
+  let self = this;
 
-      var data = self.i2c.readFrom(addr, 21);
+  if (timeout === undefined) {
+    timeout = C.readTime;
+  }
+  
+  let addr = self.address;
+  if (self.C.command.toLowerCase() != 'sleep') {
+    setTimeout(function() {
+      let data = self.i2c.readFrom(addr, 21);
 
       //changes received data to a string
       var strArray = [];
       if (data[0] == 1) {
-        for ( i=1; i<data.length; i++ ) {
-          if (data[i]!==0) {
+        for (i = 1; i < data.length; i++) {
+          if (data[i] !== 0) {
             strArray.push(String.fromCharCode(data[i]));
           }
         }
       }
-      self.C.data = data; 
-      self.ph = strArray.join("");
+      self.C.data = data;
+      self.ph = strArray.join('');
       //concatenates the string so that it actually looks like a srting rather than an array
       callback(self.ph);
-    },timeout);
+    }, timeout);
   } else {
-     callback(null); 
+    callback(null);
   }
 };
 
 /** ---------------------- Exports ------------------------- */
 
-/** 
+/**
  * This is 'exported' so it can be used with `require('ezoph.js').connect(pin1,pin2)`
  * @example <caption>How to use ezoph module</caption>
  * //create a new instance of ph sensor
@@ -180,5 +161,5 @@ ezoph.prototype.getData = function(callback, timeout) {
  * phSensor = new ( require('ezoph') )( i2c, phAddress );
  */
 exports.connect = function(i2c, address) {
-  return new ezoph(i2c,address);
+  return new ezoph(i2c, address);
 };
