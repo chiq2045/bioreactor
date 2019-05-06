@@ -45,3 +45,4 @@ heroku/
 modules/\.js
 modules/ezoph.js
 tags
+.vscode/
