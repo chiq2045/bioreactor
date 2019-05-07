@@ -31,7 +31,7 @@ var C = {
  * @property {number} timeout - the time taken to carry out operation, in ms. defaults to 900, the longest time needed for any operation.
  * @returns {numberLike} value - the output of the device. this can be anything from the pH to the current status of the device.
  */
-function ezoph(i2c, address = 99) {
+function ezoph(i2c, address) {
   this.i2c = i2c;
   this.address = address;
   this.ph = 0;
@@ -51,11 +51,12 @@ ezoph.prototype.C = {
 /**
  * Reads ph
  * @method  ezoph/read
+ * @callback
  * @returns {numberLike} data - value returned from device
  */
 ezoph.prototype.read = function(callback) {
   this.sendCommand(C.read);
-  this.getData(callback, this.timeout);
+  this.receiveData(callback);
 };
 
 /**
@@ -65,7 +66,7 @@ ezoph.prototype.read = function(callback) {
  */
 ezoph.prototype.calMid = function() {
   this.sendCommand(C.calMid);
-  return this.getData();
+  return this.receiveData();
 };
 
 /**
@@ -75,7 +76,7 @@ ezoph.prototype.calMid = function() {
  */
 ezoph.prototype.calLow = function() {
   this.sendCommand(C.calLow);
-  return this.getData();
+  return this.receiveData();
 };
 
 /**
@@ -85,7 +86,7 @@ ezoph.prototype.calLow = function() {
  */
 ezoph.prototype.calHigh = function() {
   this.sendCommand(C.calHigh);
-  return this.getData();
+  return this.receiveData();
 };
 
 /**
@@ -95,72 +96,54 @@ ezoph.prototype.calHigh = function() {
  * @param {numberLike} comm - command to send to circuit, ie. 'sleep', or 'i'
  * @returns {numberLike} data - 1 if successful, 2,254,255 if unsuccessful
  */
-ezoph.prototype.command = function(callback, comm) {
+ezoph.prototype.command = function(callback) {
   this.sendCommand(comm);
-  this.getData(callback, this.timeout);
+  this.receiveData(callback);
 };
 
 /** ------------------ Helper functions --------------------- */
 
 /**
- * Clears the command and data arrays (used before sending a new command)
- * @function ezoph/clear
- */
-ezoph.prototype.clear = function() {
-  this.C.command = [];
-  this.C.data = [];
-};
-
-/**
- * Read a command as a string
+ * Send a command to the device
  * @method ezoph/sendCommand
- * @param {numberLike} comm - the command that the device will carry out
+ * @param {numberLike} comm
  */
 ezoph.prototype.sendCommand = function(comm) {
-  //initialize arrays for debugging
-  this.clear();
-  //send command to device
   this.i2c.writeTo(this.address, comm);
-
-  this.C.command = comm;  // debug stuff
-/*  this.C.getData();
-
-  return this.ph;*/
 };
 
 /**
  * Retreive data from device
- * @method ezoph/getData
- * @param {function} callback - value of the data reived from device
+ * @method ezoph/receiveData
+ * @param {function} callback
  * @param {int} timeout - the amount of time needed for the device to complete function. minimum is 900
  */
-ezoph.prototype.getData = function(callback, timeout) {
-  //receive data from device after 900ms
-  var self = this;
-  if (timeout === undefined) { timeout = C.readTime; }
-  var addr = self.address;
-  if ( self.C.command.toLowerCase() != "sleep" ) {
-    setTimeout(function() {
+ezoph.prototype.receiveData = function(callback) {
+  let self = this;
+  let address = self.address;
+  let data;
+  setTimeout(() => {
+    data = self.i2c.readFrom(address, 21);
+    callback(self.toString(data));
+  }, 900);
+};
 
-      var data = self.i2c.readFrom(addr, 21);
-
-      //changes received data to a string
-      var strArray = [];
-      if (data[0] == 1) {
-        for ( i=1; i<data.length; i++ ) {
-          if (data[i]!==0) {
-            strArray.push(String.fromCharCode(data[i]));
-          }
-        }
+/**
+ * Changes the data from array of ascii characters to string
+ * @method ezoph/toString
+ * @param {Array} data
+ * @returns {String}
+ */
+ezoph.prototype.toString = function(data) {
+  let array = [];
+  if (data[0] == 1) {
+    for ( let i=1; i<data.length; i++ ) {
+      if (data[i]!==0) {
+        array.push(String.fromCharCode(data[i]));
       }
-      self.C.data = data; 
-      self.ph = strArray.join("");
-      //concatenates the string so that it actually looks like a srting rather than an array
-      callback(self.ph);
-    },timeout);
-  } else {
-     callback(null); 
+    }
   }
+  return array.join("");
 };
 
 /** ---------------------- Exports ------------------------- */
