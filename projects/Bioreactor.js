@@ -2,14 +2,14 @@
  * Bioreactor code setup
  */
 /***** Imports *****/
-const wifi = require('Wifi');
-const http = require('http');
+// const wifi = require('Wifi');
+// const http = require('http');
 
 /***** Setup Communication Protocols *****/
 let i2c = new I2C();
 let spi = new SPI();
-let phAddress = 0x63;   // EZO pH i2c address
-let co2Address = 0x4d;  // mh-z16 I2C/UART bridge address
+let phAddress = 0x63; // EZO pH i2c address
+let co2Address = 0x4d; // mh-z16 I2C/UART bridge address
 
 // I2C pins
 let sda = D23;
@@ -22,78 +22,80 @@ let sck = D32;
 
 // setup I2C bus
 i2c.setup({
-  scl:scl,
-  sda:sda
+  scl: scl,
+  sda: sda,
 });
 
-let phSensor = new (require('ezoph'))( i2c, phAddress );
-let co2Sensor = new (require('mh_z16'))( i2c, co2Address );
-let tempSensor = new (require('max31855k'))( spi, sck, miso, cs );
+let phSensor = new (require('ezoph'))(i2c, phAddress);
+let co2Sensor = new (require('mh_z16'))(i2c, co2Address);
+let tempSensor = new (require('max31855k'))(spi, sck, miso, cs);
 
 let co2Timer = setInterval(() => {
-    digitalWrite(actuators.co2, true);
-    console.log("Co2 on");
-    setTimeout(() => {
-        digitalWrite(actuators.co2, false);
-        console.log("Co2 off");
-    }, 5000);
-}, (1000 * 60 * 5));
-
-
+  digitalWrite(actuators.co2, true);
+  console.log('Co2 on');
+  setTimeout(() => {
+    digitalWrite(actuators.co2, false);
+    console.log('Co2 off');
+  }, actuators.co2.timeOn);
+}, actuators.co2.timeBetweenOpeningGates);
 
 co2Sensor.begin(); // initialize the co2 Sensor
 tempSensor.begin(); //initialise temperature sensor
 // measure the CO2 concentration every 10 seconds
-let readCO2 = setInterval(() => {co2Sensor.measure( () => {});}, 2000 );
+let readCO2 = setInterval(() => {
+  co2Sensor.measure(() => {});
+}, 2000);
 // measure the temperature
-let readTemp = setInterval(() => {tempSensor.readC();}, 2000);
+let readTemp = setInterval(() => {
+  tempSensor.readC();
+}, 2000);
 // measure pH
-let readPH = setInterval(() => {phSensor.read(() => {});}, 2000);
+let readPH = setInterval(() => {
+  phSensor.read(() => {});
+}, 2000);
 //actuators
 let actuators = {
-  temp: D19,
-  co2 : D18,
-  tempTime:getTime(),
-  co2Time: getTime(),
-  tempStatus : false,
-  co2Status : false
+  temp: {
+    pin: D19,
+    status: false,
+    timeOn: 7000,
+    timeOff: 14000,
+  },
+  co2: {
+    pin: D18,
+    status: false,
+    timeOn: 5000,
+    timeBetweenOpeningGates: 1000 * 60 * 5,
+  },
+  ph: {
+    pin: {
+      dir: D2,
+      step: D15,
+    },
+    status: false,
+    timeOn: 500,
+  },
 };
 
-let bioData = {
-  ph   : 0,
-  co2  : 0,
-  temp : 0
+let bioreactorData = {
+  ph: 0,
+  co2Upstream: 0,
+  temp: 0,
+  co2Downstream: 0,
 };
 
-let updateData = setInterval(() => {
-  bioData.co2 = co2Sensor.ppm;
-  bioData.temp = tempSensor.temp;
-  bioData.ph = phSensor.ph;
-}, 4000);
+const updateTime = 4000;
+const readTime = 1000;
 
+let updateBioreactorData = setInterval(() => {
+  bioreactorData.co2Upstream = co2Sensor.ppm;
+  bioreactorData.temp = tempSensor.temp;
+  bioreactorData.ph = phSensor.ph;
+}, updateTime);
 
 let updateActuators = setInterval(() => {
-  //actuators.temp = actuators.tempStatus;
-  //actuators.co2 = actuators.co2Status;
-
-  if (!actuators.tempStatus
-      && bioData.temp < 36.25
-      && getTime()-actuators.tempTime > 15) {
-    digitalWrite(actuators.temp, true);
-    actuators.tempStatus = true;
-    actuators.tempTime= getTime();
-    console.log('on');
-  }
-  if (actuators.tempStatus
-      && (bioData.temp >= 37
-      || getTime()-actuators.tempTime > 5)) {
-    digitalWrite(actuators.temp, false);
-    actuators.tempStatus = false;
-    actuators.tempTime = getTime();
-    console.log('off');
-  }
-}, 1000);
-analogWrite(D13, .15)
+  // TODO: Update the position of the actuators
+});
 
 /* Useful information for later
 let addNaOH = function() {
@@ -101,5 +103,4 @@ let addNaOH = function() {
  setTimeout(()=> {
   D12.write(true)
  }, 100)
-}
-*/ 
+}*/
