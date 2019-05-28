@@ -1,60 +1,48 @@
 /**
- * Bioreactor code setup
+ * Code to run the bioreactor
  */
-/***** Imports *****/
-// const wifi = require('Wifi');
-// const http = require('http');
 
-/***** Setup Communication Protocols *****/
-let i2c = new I2C();
-let spi = new SPI();
-let phAddress = 0x63; // EZO pH i2c address
-let co2Address = 0x4d; // mh-z16 I2C/UART bridge address
+/** ***** Setup I2C and SPI **** */
+const i2c = new I2C();
+const spi = new SPI();
 
-// I2C pins
-let sda = D23;
-let scl = D22;
+/** **** Setup pins for I2C and SPI **** */
+const sda = D23;
+const scl = D22;
 
-// SPI pins
-let miso = D25;
-let cs = D33;
-let sck = D32;
+const miso = D25;
+const cs = D33;
+const sck = D32;
 
-// setup I2C bus
+/** **** Setup I2C bus **** */
+const phAddress = 0x63;
+const co2Address = 0x4d;
 i2c.setup({
-  scl: scl,
-  sda: sda,
+  scl,
+  sda,
 });
 
-let phSensor = new (require('ezoph'))(i2c, phAddress);
-let co2Sensor = new (require('mh_z16'))(i2c, co2Address);
-let tempSensor = new (require('max31855k'))(spi, sck, miso, cs);
+/** **** Create instances of all devices **** */
+const phSensor = require('Ezoph').connect(i2c, phAddress);
+const co2Sensor = require('MH_Z16').connect(i2c, co2Address);
+const tempSensor = require('Max31855k').connect(spi, sck, miso, cs);
 
-let co2Timer = setInterval(() => {
-  digitalWrite(actuators.co2, true);
-  console.log('Co2 on');
-  setTimeout(() => {
-    digitalWrite(actuators.co2, false);
-    console.log('Co2 off');
-  }, actuators.co2.timeOn);
-}, actuators.co2.timeBetweenOpeningGates);
+/** TODO: Initialise devices */
+co2Sensor.begin();
+tempSensor.begin();
 
-co2Sensor.begin(); // initialize the co2 Sensor
-tempSensor.begin(); //initialise temperature sensor
-// measure the CO2 concentration every 10 seconds
-let readCO2 = setInterval(() => {
-  co2Sensor.measure(() => {});
-}, 2000);
-// measure the temperature
-let readTemp = setInterval(() => {
-  tempSensor.readC();
-}, 2000);
-// measure pH
-let readPH = setInterval(() => {
-  phSensor.read(() => {});
-}, 2000);
-//actuators
-let actuators = {
+/** TODO: Define all variables to be used for data processing */
+const readTime = 2000;
+const updateTime = 5000;
+
+const bioreactorData = {
+  ph: 0,
+  co2: 0,
+  temp: 0,
+  timeStamp: 0,
+};
+
+const controllers = {
   temp: {
     pin: D19,
     status: false,
@@ -65,7 +53,9 @@ let actuators = {
     pin: D18,
     status: false,
     timeOn: 5000,
-    timeBetweenOpeningGates: 1000 * 60 * 5,
+    timeOff: 1000 * 60 * 5,
+    startTime: 0,
+    stopTime: 0,
   },
   ph: {
     pin: {
@@ -73,34 +63,44 @@ let actuators = {
       step: D15,
     },
     status: false,
-    timeOn: 500,
+    timeOn: 100,
   },
 };
 
-let bioreactorData = {
-  ph: 0,
-  co2Upstream: 0,
-  temp: 0,
-  co2Downstream: 0,
-};
-
-const updateTime = 4000;
-const readTime = 1000;
-
-let updateBioreactorData = setInterval(() => {
-  bioreactorData.co2Upstream = co2Sensor.ppm;
-  bioreactorData.temp = tempSensor.temp;
-  bioreactorData.ph = phSensor.ph;
+/** TODO: Start intervals for data reading tasks */
+const updateBioreactorData = setInterval(() => {
+  phSensor.read((res) => { bioreactorData.ph = res; });
+  co2Sensor.measure((res) => { bioreactorData.co2 = res; });
+  bioreactorData.temp = tempSensor.read();
 }, updateTime);
 
-let updateActuators = setInterval(() => {
-  // TODO: Update the position of the actuators
-});
+/** TODO: Functions for controllers */
+function addNAOH() {
+  const { step } = controllers.ph.pin;
+  const { timeOn } = controllers.ph;
 
-/* Useful information for later
-let addNaOH = function() {
- D12.write(false)
- setTimeout(()=> {
-  D12.write(true)
- }, 100)
-}*/
+  step.write(on);
+  setTimeout(() => { step.write(false); }, timeOn);
+}
+
+const updateCO2Controller = setInterval(() => {
+  const { pin, timeOn, timeOff } = controllers.co2;
+  let { status, startTime, stopTime } = controllers.co2;
+  const timePassed = getTime();
+
+  if (status) {
+    if (timePassed - startTime < timeOn) {
+      pin.write(true);
+    } else {
+      stopTime = getTime();
+      status = false;
+    }
+  } else if (timePassed - stopTime < timeOff) {
+    pin.write(false);
+  } else {
+    startTime = getTime();
+    status = true;
+  }
+});
+/** TODO: Start intervals for data processing */
+/** TODO: Start http server */
